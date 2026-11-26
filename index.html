@@ -167,75 +167,95 @@
         </div>
       </div>
 
+      <!-- PLAIN-ENGLISH MONEY COACH (NO JARGON) -->
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--primary)]/30 p-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-base">💡</span>
+            <h2 class="text-sm font-bold">Your Finances in Plain English</h2>
+          </div>
+          <span id="coachBottomLineBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--primary)]/15 text-[var(--primary)]">Live Summary</span>
+        </div>
+        <div id="plainEnglishCoachList" class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs"></div>
+      </div>
+
       <!-- EXECUTIVE INSIGHTS STRIP -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- 1. FINANCIAL HEALTH SCORE -->
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <div>
-              <h2 class="text-sm font-bold">Financial Health Score</h2>
-              <p id="healthGradeText" class="text-xs text-[var(--muted-foreground)]">5-pillar German wealth check</p>
+              <h2 class="text-sm font-bold">Overall Money Health (0–100)</h2>
+              <p id="healthGradeText" class="text-xs text-[var(--muted-foreground)]">How balanced your setup is today</p>
             </div>
             <svg id="healthScoreRing" viewBox="0 0 64 64" class="w-14 h-14 shrink-0"></svg>
           </div>
-          <div id="healthPillarsList" class="space-y-1.5 text-xs"></div>
+          <div id="healthPillarsList" class="space-y-2 text-xs"></div>
         </div>
 
-        <!-- 2. WEALTH VELOCITY & 1Y/3Y/5Y MINI-FORECAST -->
+        <!-- 2. HOW FAST YOUR WEALTH GROWS + 1Y/3Y/5Y FORECAST -->
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 flex flex-col justify-between space-y-3">
           <div class="space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-bold">Annual Wealth Velocity</h2>
-              <span id="velTotalYr" class="sensitive text-xs font-mono font-bold text-[var(--success)]">+€0/yr</span>
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-bold">How Fast Your Wealth Grows</h2>
+                <p class="text-[11px] text-[var(--muted-foreground)]">What you add + what your money earns on its own</p>
+              </div>
+              <span id="velTotalYr" class="sensitive text-xs font-mono font-bold text-[var(--success)] shrink-0">+€0/yr</span>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
-                <div class="text-[var(--muted-foreground)]">Your Contributions</div>
+                <div class="text-[var(--muted-foreground)]">You Put Away</div>
                 <div id="velContribYr" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--primary)]">+€0/yr</div>
+                <div class="text-[11px] text-[var(--muted-foreground)]">From your salary</div>
               </div>
               <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
-                <div class="text-[var(--muted-foreground)]">Est. Passive Growth</div>
+                <div class="text-[var(--muted-foreground)]">Money Works for You</div>
                 <div id="velGrowthYr" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">+€0/yr</div>
+                <div id="velPassiveMo" class="sensitive text-[11px] text-[var(--muted-foreground)]">≈ €0/mo passive</div>
               </div>
             </div>
           </div>
           <div class="space-y-1.5 pt-2 border-t border-[var(--border)]">
-            <div class="flex justify-between text-xs">
-              <span class="text-[var(--muted-foreground)]">Quick Forecast (Today's €)</span>
-              <span id="nextMilestoneEta" class="font-mono text-[var(--primary)] font-semibold"></span>
+            <div class="flex justify-between text-xs gap-2">
+              <span class="text-[var(--muted-foreground)]">Expected Wealth (Today's Buying Power)</span>
+              <span id="nextMilestoneEta" class="font-mono text-[var(--primary)] font-semibold shrink-0"></span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-xs text-center">
               <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
-                <div class="text-[var(--muted-foreground)]">+1 Yr</div>
+                <div class="text-[var(--muted-foreground)]">In 1 Year</div>
                 <div id="miniProj1y" class="sensitive font-mono font-bold mt-0.5">€0</div>
               </div>
               <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
-                <div class="text-[var(--muted-foreground)]">+3 Yrs</div>
+                <div class="text-[var(--muted-foreground)]">In 3 Years</div>
                 <div id="miniProj3y" class="sensitive font-mono font-bold mt-0.5">€0</div>
               </div>
               <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
-                <div class="text-[var(--muted-foreground)]">+5 Yrs</div>
+                <div class="text-[var(--muted-foreground)]">In 5 Years</div>
                 <div id="miniProj5y" class="sensitive font-mono font-bold mt-0.5 text-[var(--primary)]">€0</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. LIQUID VS LOCKED WEALTH & MONTHLY NET SPLIT -->
+        <!-- 3. ACCESSIBLE NOW VS RETIREMENT + PAYCHECK SPLIT -->
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 flex flex-col justify-between space-y-3">
           <div class="space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-bold">Liquid vs. Locked Wealth</h2>
-              <span id="liquidPctBadge" class="text-xs font-mono text-[var(--muted-foreground)]">0% liquid</span>
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-bold">Usable Now vs. Reserved for Retirement</h2>
+                <p class="text-[11px] text-[var(--muted-foreground)]">What you could access anytime vs. pension contracts</p>
+              </div>
+              <span id="liquidPctBadge" class="text-xs font-mono text-[var(--muted-foreground)] shrink-0">0% usable</span>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
-                <div class="text-[var(--muted-foreground)]">Accessible Today</div>
+                <div class="text-[var(--muted-foreground)]">Usable Anytime</div>
                 <div id="statLiquidWealth" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">€0</div>
-                <div class="text-[11px] text-[var(--muted-foreground)]">Cash + FFB + Solit</div>
+                <div class="text-[11px] text-[var(--muted-foreground)]">Bank + FFB + Solit</div>
               </div>
               <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
-                <div class="text-[var(--muted-foreground)]">Locked (Pensions)</div>
+                <div class="text-[var(--muted-foreground)]">Reserved for Old Age</div>
                 <div id="statLockedWealth" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--chart-3)]">€0</div>
                 <div class="text-[11px] text-[var(--muted-foreground)]">MetallRente + Conti</div>
               </div>
@@ -243,7 +263,7 @@
           </div>
           <div class="space-y-1.5 pt-2 border-t border-[var(--border)] text-xs">
             <div class="flex justify-between">
-              <span class="text-[var(--muted-foreground)]">Monthly Net Salary Split</span>
+              <span class="text-[var(--muted-foreground)]">Where Your Monthly Paycheck Goes</span>
               <span id="statRetireQuick" class="font-mono font-semibold cursor-pointer text-[var(--primary)] hover:underline" onclick="switchTab('retirement')">Retire: 0% →</span>
             </div>
             <div id="netSplitBar" class="w-full h-3 rounded-full overflow-hidden flex bg-[var(--background)]"></div>
@@ -2218,13 +2238,46 @@
       const sGrowth = Math.min(20, (eqShare / 45) * 20);
       const metalShare = m.netWorth > 0 ? (m.solitTotal / m.netWorth) * 100 : 0;
       const sMetal = metalShare >= 5 && metalShare <= 18 ? 20 : metalShare > 0 ? 14 : 6;
-      const retPct = (state.retireTargetMonthly || 3000) > 0 ? (m.plannedTotalMonthly / (state.retireTargetMonthly || 3000)) * 100 : 100;
+      const targetRet = state.retireTargetMonthly || 3000;
+      const retPct = targetRet > 0 ? (m.plannedTotalMonthly / targetRet) * 100 : 100;
       const sRet = Math.min(20, (retPct / 100) * 20);
       const totalScore = Math.round(sLiq + sSave + sGrowth + sMetal + sRet);
 
       const scoreColor = totalScore >= 80 ? 'var(--success)' : totalScore >= 60 ? 'var(--primary)' : 'var(--warning)';
-      const grade = totalScore >= 85 ? 'Excellent Wealth Architecture' : totalScore >= 70 ? 'Strong & On Track' : totalScore >= 55 ? 'Solid — Room to Optimize' : 'Needs Attention';
+      const grade = totalScore >= 85 ? 'Very Strong — You are in great shape' : totalScore >= 70 ? 'Good & Healthy — Keep going' : totalScore >= 55 ? 'Solid Start — A few easy wins' : 'Needs a Few Adjustments';
       document.getElementById('healthGradeText').textContent = grade;
+
+      // Plain-English 3-card coach summary
+      const passiveMo = m.annualPassiveGrowthYr / 12;
+      const safetyTone = m.runwayMonths >= 3 ? 'var(--success)' : 'var(--error)';
+      const safetyText = m.runwayMonths >= 6
+        ? `Great safety net: if your income stopped tomorrow, your bank cash pays your bills for <b>${m.runwayMonths.toFixed(1)} months</b>.`
+        : m.runwayMonths >= 3
+        ? `Solid safety net: your cash covers <b>${m.runwayMonths.toFixed(1)} months</b> of bills (3–6 months is the sweet spot).`
+        : `Low safety cushion: your cash only covers <b>${m.runwayMonths.toFixed(1)} months</b> of bills. Aim to build this to at least 3 months first.`;
+
+      const growthText = `You put away <b class="sensitive">${fmtEUR(m.totalMonthlySaveInvest)}/mo</b>, and your existing investments quietly earn about <b class="sensitive">${fmtEUR(passiveMo)}/mo</b> on their own — like an extra paycheck without working.`;
+
+      const retGap = m.plannedTotalMonthly - targetRet;
+      const retTone = retGap >= 0 ? 'var(--success)' : 'var(--warning)';
+      const retText = retGap >= 0
+        ? `Retirement looks strong: even if you stopped saving today you'd have <b class="sensitive">${fmtEUR(m.accruedTotalMonthly)}/mo</b>; sticking to your plan brings <b class="sensitive">${fmtEUR(m.plannedTotalMonthly)}/mo</b> (+${fmtEUR(retGap)} above goal).`
+        : `Retirement check: you've locked in <b class="sensitive">${fmtEUR(m.accruedTotalMonthly)}/mo</b> so far, and your plan reaches <b class="sensitive">${fmtEUR(m.plannedTotalMonthly)}/mo</b> — about <b class="sensitive">${fmtEUR(Math.abs(retGap))}/mo</b> short of your ${fmtEUR(targetRet)} goal.`;
+
+      document.getElementById('coachBottomLineBadge').textContent = `Score ${totalScore}/100 · ${totalScore >= 75 ? 'Healthy' : 'Room to Grow'}`;
+      document.getElementById('plainEnglishCoachList').innerHTML = `
+        <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 border-l-4" style="border-left-color:${safetyTone}">
+          <div class="font-bold text-[var(--foreground)] mb-1">🛡️ 1. Emergency Safety</div>
+          <p class="text-[var(--muted-foreground)] leading-relaxed">${safetyText}</p>
+        </div>
+        <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 border-l-4" style="border-left-color:var(--primary)">
+          <div class="font-bold text-[var(--foreground)] mb-1">🚀 2. Money Growing for You</div>
+          <p class="text-[var(--muted-foreground)] leading-relaxed">${growthText}</p>
+        </div>
+        <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 border-l-4 cursor-pointer hover:border-[var(--primary)] transition" style="border-left-color:${retTone}" onclick="switchTab('retirement')">
+          <div class="font-bold text-[var(--foreground)] mb-1">🏖️ 3. Retirement Outlook →</div>
+          <p class="text-[var(--muted-foreground)] leading-relaxed">${retText}</p>
+        </div>`;
 
       const r = 24, circ = 2 * Math.PI * r, dash = (totalScore / 100) * circ;
       document.getElementById('healthScoreRing').innerHTML = `
@@ -2234,19 +2287,21 @@
         <text x="32" y="36" text-anchor="middle" fill="var(--foreground)" font-size="14" font-weight="700" font-family="monospace">${totalScore}</text>`;
 
       const pillars = [
-        { name: 'Liquidity Buffer', val: sLiq, max: 20, detail: `${m.runwayMonths.toFixed(1)} mo` },
-        { name: 'Savings Rate', val: sSave, max: 20, detail: `${m.sparquote.toFixed(0)}%` },
-        { name: 'Equity Growth (FFB)', val: sGrowth, max: 20, detail: `${eqShare.toFixed(0)}%` },
-        { name: 'Metal Hedge (Solit)', val: sMetal, max: 20, detail: `${metalShare.toFixed(0)}%` },
-        { name: 'Retirement Funded', val: sRet, max: 20, detail: `${Math.round(retPct)}%` }
+        { name: 'Safety Cushion (Goal: 3–6 mo)', val: sLiq, max: 20, detail: `${m.runwayMonths.toFixed(1)} mo` },
+        { name: 'Paycheck Kept (Goal: 25%+)', val: sSave, max: 20, detail: `${m.sparquote.toFixed(0)}%` },
+        { name: 'Stock Growth / ETFs (Goal: 45%+)', val: sGrowth, max: 20, detail: `${eqShare.toFixed(0)}%` },
+        { name: 'Metals Shield / Solit (Goal: 5–18%)', val: sMetal, max: 20, detail: `${metalShare.toFixed(0)}%` },
+        { name: 'Retirement Goal Covered', val: sRet, max: 20, detail: `${Math.round(retPct)}%` }
       ];
       document.getElementById('healthPillarsList').innerHTML = pillars.map(p => `
-        <div class="flex items-center gap-2">
-          <span class="w-28 text-[var(--muted-foreground)] truncate">${p.name}</span>
-          <div class="flex-1 h-1.5 rounded-full bg-[var(--background)] overflow-hidden">
+        <div class="space-y-0.5">
+          <div class="flex justify-between text-[11px]">
+            <span class="text-[var(--muted-foreground)]">${p.name}</span>
+            <span class="font-mono font-semibold">${p.detail}</span>
+          </div>
+          <div class="w-full h-1.5 rounded-full bg-[var(--background)] overflow-hidden">
             <div style="width:${((p.val / p.max) * 100).toFixed(0)}%; background:${scoreColor}" class="h-full rounded-full"></div>
           </div>
-          <span class="w-10 text-right font-mono">${p.detail}</span>
         </div>`).join('');
 
       // 2. Annual Wealth Velocity & 1y/3y/5y Mini-Forecast
@@ -2254,6 +2309,7 @@
       document.getElementById('velTotalYr').textContent = `+${fmtEUR(totVel)}/yr`;
       document.getElementById('velContribYr').textContent = `+${fmtEUR(m.annualContribYr)}/yr`;
       document.getElementById('velGrowthYr').textContent = `+${fmtEUR(m.annualPassiveGrowthYr)}/yr`;
+      document.getElementById('velPassiveMo').textContent = `≈ ${fmtEUR(passiveMo)}/mo passive`;
 
       const bs = m.baselineSeries || [];
       const atYr = (y) => bs[Math.min(y, bs.length - 1)]?.total || m.netWorth;
@@ -2265,25 +2321,25 @@
       const nextMs = milestones.find(x => x > m.netWorth) || (Math.ceil((m.netWorth + 1) / 500000) * 500000);
       const hitMs = bs.find(p => p.total >= nextMs);
       document.getElementById('nextMilestoneEta').textContent = hitMs
-        ? `Next ${fmtEUR(nextMs)}: ${hitMs.year}`
-        : `Next: ${fmtEUR(nextMs)}`;
+        ? `Reaches ${fmtEUR(nextMs)} in ${hitMs.year}`
+        : `Next goal: ${fmtEUR(nextMs)}`;
 
       // 3. Liquid vs. Locked Wealth & Net Pay Split
       const liquid = m.cashTotal + m.etfTotal + m.solitTotal;
       const locked = m.metallTotal + m.contiTotal;
       const liqPct = m.netWorth > 0 ? ((liquid / m.netWorth) * 100).toFixed(0) : 0;
-      document.getElementById('liquidPctBadge').textContent = `${liqPct}% liquid`;
+      document.getElementById('liquidPctBadge').textContent = `${liqPct}% usable`;
       document.getElementById('statLiquidWealth').textContent = fmtEUR(liquid);
       document.getElementById('statLockedWealth').textContent = fmtEUR(locked);
       document.getElementById('statRetireQuick').textContent = `Retire: ${Math.round(retPct)}% funded →`;
 
       const netM = m.pay.netMonthly || 1;
       const segs = [
-        { label: 'Spend', val: state.monthlySpend || 0, color: 'var(--muted-foreground)' },
-        { label: 'Cash', val: m.cashPlan, color: 'var(--chart-2)' },
+        { label: 'Bills/Living', val: state.monthlySpend || 0, color: 'var(--muted-foreground)' },
+        { label: 'Bank Save', val: m.cashPlan, color: 'var(--chart-2)' },
         { label: 'Invest', val: m.etfPlan + m.solitPlan, color: 'var(--chart-1)' },
         { label: 'Conti', val: m.contiMonthly, color: 'var(--chart-5)' },
-        { label: 'Free', val: Math.max(0, m.monthlySurplus - (m.cashPlan + m.etfPlan + m.solitPlan + m.contiMonthly)), color: 'var(--success)' }
+        { label: 'Leftover', val: Math.max(0, m.monthlySurplus - (m.cashPlan + m.etfPlan + m.solitPlan + m.contiMonthly)), color: 'var(--success)' }
       ].filter(s => s.val > 0);
       const segSum = segs.reduce((a, b) => a + b.val, 0) || netM;
       document.getElementById('netSplitBar').innerHTML = segs.map(s =>
