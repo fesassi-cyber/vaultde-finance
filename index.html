@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; frame-src 'self' blob:; connect-src 'self' https://api.frankfurter.app https://api.gold-api.com;" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>VaultDE — Ultra-Private German Personal Finance &amp; Retirement Cockpit</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen pb-20 md:pb-8">
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-20 md:bottom-5 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: VAULT LOCK / ENCRYPT / DECRYPT                     -->
+  <!-- ========================================================= -->
+  <div id="lockModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-[var(--card)] border border-[var(--border)] p-6 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-[var(--primary)]/15 border border-[var(--primary)]/30 text-[var(--primary)] flex items-center justify-center text-lg font-bold">
+          🔒
+        </div>
+        <div>
+          <h2 id="lockModalTitle" class="text-base font-bold">Vault Locked (AES-256-GCM)</h2>
+          <p id="lockModalDesc" class="text-xs text-[var(--muted-foreground)]">Enter your master passphrase to decrypt your local vault.</p>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <label class="block text-xs font-medium text-[var(--muted-foreground)]">Master Passphrase</label>
+        <input id="vaultPassphraseInput" type="password" placeholder="Enter strong passphrase..." onkeydown="if(event.key==='Enter') submitLockModal()"
+          class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3.5 py-2.5 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]" />
+        <p id="lockError" class="hidden text-xs text-[var(--error)]"></p>
+      </div>
+      <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)]">
+        Derived locally via <code class="font-mono">PBKDF2-SHA256 (250k)</code> + <code class="font-mono">AES-256-GCM</code>. Your passphrase is never stored or transmitted.
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button id="lockCancelBtn" onclick="closeLockModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Cancel</button>
+        <button id="lockActionBtn" onclick="submitLockModal()" class="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">Unlock Vault</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MAIN APP SHELL                                            -->
+  <!-- ========================================================= -->
+  <div class="max-w-7xl mx-auto px-3 sm:px-5 py-4 space-y-4">
+
+    <!-- HEADER -->
+    <header class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+          V€
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base font-bold tracking-tight">VaultDE</h1>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--success)]/15 text-[var(--success)] border border-[var(--success)]/25">
+              ● 0 B Leaked
+            </span>
+            <span id="encryptBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--warning)]/15 text-[var(--warning)] border border-[var(--warning)]/25">
+              🔓 Unencrypted
+            </span>
+            <span id="lastQuarterBadge" class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">
+              Last Q: —
+            </span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">German Wealth, DRV/MetallRente, FFB/Solit &amp; Advisor Cockpit</p>
+        </div>
+      </div>
+
+      <!-- ACTION TOOLBAR -->
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <button id="privacyBlurBtn" onclick="togglePrivacyBlur()" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)] transition" title="Blur all EUR values for public/train viewing">
+          👁 Hide €
+        </button>
+        <button onclick="openQuarterlyModal()" class="px-3 py-1.5 rounded-xl bg-[var(--success)]/15 border border-[var(--success)]/35 text-[var(--success)] text-xs font-semibold hover:bg-[var(--success)]/25 transition">
+          📅 1x/Q Update
+        </button>
+        <button onclick="openGeminiSetupModal()" class="px-3 py-1.5 rounded-xl bg-[var(--primary)]/15 border border-[var(--primary)]/35 text-[var(--primary)] text-xs font-semibold hover:bg-[var(--primary)]/25 transition">
+          ✨ Gemini Import
+        </button>
+        <button id="encryptLockBtn" onclick="handleLockOrEncryptBtn()" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)] transition">
+          🔐 Encrypt
+        </button>
+        <button onclick="exportEncryptedVault()" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)] transition" title="Export AES-256 encrypted .vault.json">
+          ⬇ Export
+        </button>
+        <label class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)] transition cursor-pointer" title="Import .vault.json backup">
+          ⬆ Import
+          <input type="file" id="importVaultFile" accept=".json" class="hidden" onchange="importVault(event)" />
+        </label>
+        <button id="themeToggleBtn" onclick="toggleTheme()" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)] transition" title="Toggle Dark / Light Mode">
+          🌗
+        </button>
+        <button id="pwaInstallBtn" onclick="installPwa()" class="hidden px-3 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition">
+          📲 Install App
+        </button>
+      </div>
+    </header>
+
+    <!-- DESKTOP TAB BAR -->
+    <nav class="hidden md:flex items-center gap-6 border-b border-[var(--border)] px-1 overflow-x-auto no-scrollbar">
+      <button id="tabBtn-status" onclick="switchTab('status')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-active">
+        1. Status &amp; Cashflow
+      </button>
+      <button id="tabBtn-retirement" onclick="switchTab('retirement')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive">
+        2. Retirement (DRV &amp; MetallRente)
+      </button>
+      <button id="tabBtn-investments" onclick="switchTab('investments')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive">
+        3. Investments (FFB, Solit &amp; Cash)
+      </button>
+      <button id="tabBtn-strategy" onclick="switchTab('strategy')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive">
+        4. Plans, Predictions &amp; Strategy
+      </button>
+      <button id="tabBtn-advisor" onclick="switchTab('advisor')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive flex items-center gap-1.5">
+        <span>5. Advisor (D. Bossenz)</span>
+        <span id="advisorBadgeCount" class="hidden px-1.5 py-0.2 rounded-full text-xs bg-[var(--warning)]/20 text-[var(--warning)] font-mono">0</span>
+      </button>
+    </nav>
+
+    <!-- ========================================================= -->
+    <!-- TAB 1: STATUS & CASHFLOW                                  -->
+    <!-- ========================================================= -->
+    <section id="tab-status" class="space-y-4">
+      <!-- ACTION BANNER (shown when Daniel Bossenz items need attention) -->
+      <div id="statusAdvisorBanner" class="hidden rounded-xl bg-[var(--warning)]/10 border border-[var(--warning)]/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span>📌</span>
+          <span id="statusAdvisorBannerText" class="font-medium"></span>
+        </div>
+        <button onclick="switchTab('advisor')" class="text-[var(--primary)] font-semibold hover:underline">Open Tab 5 →</button>
+      </div>
+
+      <!-- TOP KPI CARDS -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4">
+          <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+            <span>Total Net Worth</span>
+            <span id="kpiQoQDelta" class="font-mono text-[var(--success)]"></span>
+          </div>
+          <div id="kpiNetWorth" class="sensitive text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1">€0</div>
+          <div id="kpiNetWorthSub" class="text-xs text-[var(--muted-foreground)] mt-1">Liquid + Invested + bAV</div>
+        </div>
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4">
+          <div class="text-xs text-[var(--muted-foreground)]">Est. Monthly Net Salary</div>
+          <div id="kpiNetMonthly" class="sensitive text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1 text-[var(--primary)]">€0</div>
+          <div id="kpiTaxRate" class="text-xs text-[var(--muted-foreground)] mt-1">Steuerklasse I</div>
+        </div>
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4">
+          <div class="text-xs text-[var(--muted-foreground)]">Monthly Surplus</div>
+          <div id="kpiSurplus" class="sensitive text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1 text-[var(--success)]">€0</div>
+          <div id="kpiSparquote" class="text-xs text-[var(--muted-foreground)] mt-1">0% Sparquote</div>
+        </div>
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4">
+          <div class="text-xs text-[var(--muted-foreground)]">Liquidity Runway</div>
+          <div id="kpiRunway" class="text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1">0 mo</div>
+          <div id="kpiRunwaySub" class="sensitive text-xs text-[var(--muted-foreground)] mt-1">Tagesgeld + Festgeld</div>
+        </div>
+      </div>
+
+      <!-- PROFILE + ALLOCATION -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- GERMAN PAYROLL & PROFILE -->
+        <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Profile &amp; German Net Salary Engine (2025/26)</h2>
+            <button onclick="resetToDemo()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">↺ Demo</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gross Annual Salary (€/yr)</label>
+              <input id="inGrossSalary" type="number" step="1000" min="0" oninput="updateField('grossSalary', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Steuerklasse (Tax Class)</label>
+              <select id="inTaxClass" onchange="updateField('taxClass', this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]">
+                <option value="I">Class I — Single</option>
+                <option value="II">Class II — Single Parent</option>
+                <option value="III">Class III — Married (Higher)</option>
+                <option value="IV">Class IV — Married (Equal)</option>
+                <option value="V">Class V — Married (Lower)</option>
+                <option value="VI">Class VI — Second Job</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Current Age / Target Retirement</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="inAge" type="number" min="18" max="80" title="Current Age" oninput="updateField('age', +this.value)"
+                  class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+                <input id="inRetireAge" type="number" min="50" max="75" title="Target Retirement Age" oninput="updateField('retireAge', +this.value)"
+                  class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Avg. Monthly Spending (€/mo)</label>
+              <input id="inMonthlySpend" type="number" step="50" min="0" oninput="updateField('monthlySpend', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Health Insurance (GKV vs. PKV)</label>
+              <select id="inHealthType" onchange="updateField('healthType', this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]">
+                <option value="GKV">GKV (Public Statutory)</option>
+                <option value="PKV">PKV (Private Health)</option>
+              </select>
+            </div>
+            <div id="pkvBox" class="hidden">
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">PKV Employee Share (€/mo)</label>
+              <input id="inPkvMonthly" type="number" step="25" min="0" oninput="updateField('pkvMonthly', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Kirchensteuer (Church Tax)</label>
+              <select id="inChurchTax" onchange="updateField('churchTax', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]">
+                <option value="0">None (0%)</option>
+                <option value="0.08">Bavaria / BW (8%)</option>
+                <option value="0.09">Other States (9%)</option>
+              </select>
+            </div>
+            <div class="flex items-end pb-1">
+              <label class="flex items-center gap-2 text-xs text-[var(--muted-foreground)] cursor-pointer">
+                <input id="inHasChildren" type="checkbox" onchange="updateField('hasChildren', this.checked)" class="accent-[var(--primary)] w-4 h-4" />
+                Has Children (removes 0.6% PV surcharge)
+              </label>
+            </div>
+          </div>
+
+          <!-- PAYCHECK VISUAL BAR -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-[var(--muted-foreground)]">Monthly Cashflow Waterfall</span>
+              <span id="cashflowUnallocated" class="sensitive font-mono text-[var(--muted-foreground)]"></span>
+            </div>
+            <div id="paycheckBar" class="w-full h-3 rounded-full overflow-hidden flex bg-[var(--card)]"></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div>
+                <div class="text-[var(--muted-foreground)]">Gross / mo</div>
+                <div id="tbGross" class="sensitive font-mono font-semibold tabular-nums">€0</div>
+              </div>
+              <div>
+                <div class="text-[var(--muted-foreground)]">Tax + Soli + Ch.</div>
+                <div id="tbTax" class="sensitive font-mono font-semibold tabular-nums text-[var(--error)]">-€0</div>
+              </div>
+              <div>
+                <div class="text-[var(--muted-foreground)]">Social / Health</div>
+                <div id="tbSocial" class="sensitive font-mono font-semibold tabular-nums text-[var(--warning)]">-€0</div>
+              </div>
+              <div>
+                <div class="text-[var(--muted-foreground)]">Net / mo</div>
+                <div id="tbNet" class="sensitive font-mono font-semibold tabular-nums text-[var(--success)]">€0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: ALLOCATION DONUT + QUARTERLY HISTORY -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 flex-1 flex flex-col justify-between space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Asset Allocation</h2>
+              <span id="statusMonthlyInvest" class="sensitive text-xs font-mono text-[var(--primary)] font-semibold">€0/mo Sparplan</span>
+            </div>
+            <div class="flex items-center justify-center gap-5 py-1">
+              <svg id="allocationDonut" viewBox="0 0 180 180" class="w-36 h-36 sm:w-40 sm:h-40 shrink-0 sensitive"></svg>
+              <div id="allocationLegend" class="space-y-2 text-xs flex-1"></div>
+            </div>
+          </div>
+
+          <!-- QUARTERLY NET WORTH HISTORY -->
+          <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold">Quarterly Net Worth Log</h2>
+                <p class="text-xs text-[var(--muted-foreground)]">Auto-logged each 1x/Q check-in</p>
+              </div>
+              <button onclick="logSnapshotNow()" class="px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)]">
+                + Log Now
+              </button>
+            </div>
+            <svg id="historySparkline" viewBox="0 0 360 88" class="w-full h-22 sensitive"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: RETIREMENT (DRV & METALLRENTE + DRAWDOWN)          -->
+    <!-- ========================================================= -->
+    <section id="tab-retirement" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- LAYER 1: DRV -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Deutsche Rentenversicherung</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--chart-1)]/15 text-[var(--chart-1)] font-medium">Layer 1</span>
+          </div>
+          <div class="space-y-2.5">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Earned Pension Today (€/mo, Renteninfo)</label>
+              <input id="inDrvCurrent" type="number" step="50" min="0" oninput="updateField('drvCurrentMonthly', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Projected Pension at Retirement (€/mo)</label>
+              <input id="inDrvProjected" type="number" step="50" min="0" oninput="updateField('drvProjectedMonthly', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Annual Rentenanpassung (%/yr)</label>
+              <input id="inDrvGrowth" type="number" step="0.1" min="0" max="5" oninput="updateField('drvGrowthRate', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+          </div>
+          <div class="pt-2 border-t border-[var(--border)] flex justify-between text-xs">
+            <span class="text-[var(--muted-foreground)]">Est. Net DRV (Today's €, after KVdR/tax)</span>
+            <span id="outDrvReal" class="sensitive font-mono font-bold">€0/mo</span>
+          </div>
+        </div>
+
+        <!-- LAYER 2: METALLRENTE -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">MetallRente (bAV)</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--chart-3)]/15 text-[var(--chart-3)] font-medium">Layer 2</span>
+          </div>
+          <div class="space-y-2.5">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Current Balance / Stand (€)</label>
+              <input id="inMetallBalance" type="number" step="500" min="0" oninput="updateField('metallBalance', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Monthly Contribution (Total €)</label>
+              <input id="inMetallMonthly" type="number" step="25" min="0" oninput="updateField('metallMonthly', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Expected Annual Return (%)</label>
+              <input id="inMetallReturn" type="number" step="0.2" min="0" max="12" oninput="updateField('metallReturn', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+          </div>
+          <div class="pt-2 border-t border-[var(--border)] space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Nominal Capital at Retirement</span>
+              <span id="outMetallCapital" class="sensitive font-mono font-semibold">€0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Est. Net Monthly (Today's €, after bAV tax/KV)</span>
+              <span id="outMetallReal" class="sensitive font-mono font-bold">€0/mo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RENTENLÜCKE SUMMARY -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Rentenlücke (Real Gap)</h2>
+            <span id="retYearsLeft" class="text-xs font-mono text-[var(--muted-foreground)]">0 yrs</span>
+          </div>
+          <div class="space-y-2.5">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Target Monthly Income (Today's €)</label>
+              <input id="inRetireTarget" type="number" step="100" min="0" oninput="updateField('retireTargetMonthly', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Assumed Inflation (%/yr)</label>
+              <input id="inInflation" type="number" step="0.1" min="0" max="6" oninput="updateField('inflation', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+          </div>
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-1.5 text-xs">
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">DRV + MetallRente (Net Real)</span>
+              <span id="retBaseIncome" class="sensitive font-mono font-semibold">€0/mo</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Private Portfolio (3.5% SWR)</span>
+              <span id="retPrivateIncome" class="sensitive font-mono font-semibold text-[var(--primary)]">€0/mo</span>
+            </div>
+            <div class="border-t border-[var(--border)] pt-1.5 flex justify-between font-bold">
+              <span>Net vs. Target</span>
+              <span id="retGapStatus" class="sensitive font-mono">€0/mo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INCOME STACK + DRAWDOWN TO AGE 95 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <h3 class="text-sm font-bold">3-Layer Retirement Income Mix</h3>
+          <div id="retirementBarContainer" class="space-y-3"></div>
+        </div>
+        <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Post-Retirement Drawdown Simulator (Age <span id="ddStartAge">67</span> → 95)</h3>
+              <p class="text-xs text-[var(--muted-foreground)]">Tests if your private wealth sustains your target income (after DRV &amp; MetallRente) until age 95.</p>
+            </div>
+            <span id="drawdownVerdict" class="text-xs font-semibold px-2.5 py-1 rounded-full"></span>
+          </div>
+          <svg id="drawdownChart" viewBox="0 0 560 155" class="w-full h-40 sensitive"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 3: INVESTMENTS (FFB, SOLIT, CASH & TAX SHIELD)        -->
+    <!-- ========================================================= -->
+    <section id="tab-investments" class="hidden space-y-4">
+      <!-- ANONYMOUS MARKET ORACLE + GERMAN TAX ALLOWANCE -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold">Anonymous Market Oracle (Zero-Leakage)</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Fetches public FX &amp; precious-metal rates without sending any user data.</p>
+            </div>
+            <button id="fetchMarketBtn" onclick="fetchAnonymousMarketData()" class="px-3 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition">
+              ↻ Sync Public Rates
+            </button>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">EUR / USD</div>
+              <input id="mktEurUsd" type="number" step="0.01" oninput="updateMarket('eurUsd', +this.value)"
+                class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
+            </div>
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">Gold (€/g)</div>
+              <input id="mktGoldG" type="number" step="0.5" oninput="updateMarket('goldEurPerG', +this.value)"
+                class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
+            </div>
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">Silver (€/g)</div>
+              <input id="mktSilverG" type="number" step="0.01" oninput="updateMarket('silverEurPerG', +this.value)"
+                class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
+            </div>
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">Oracle Status</div>
+              <div id="mktStatus" class="font-mono text-xs mt-1 text-[var(--success)]">Ready (Offline)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GERMAN SPARER-PAUSCHBETRAG & VORABPAUSCHALE TRACKER -->
+        <div class="lg:col-span-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Freistellungsauftrag &amp; Vorabpauschale</h2>
+            <span id="taxAllowanceCap" class="text-xs font-mono text-[var(--primary)] font-semibold">€1,000/yr</span>
+          </div>
+          <div class="w-full h-2.5 rounded-full bg-[var(--background)] border border-[var(--border)] overflow-hidden">
+            <div id="taxAllowanceBar" class="h-full rounded-full transition-all" style="width:0%; background:var(--primary)"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+            <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] p-2">
+              <div class="text-[var(--muted-foreground)]">Cash Interest / yr</div>
+              <div id="taxCashInt" class="sensitive font-mono font-semibold">€0</div>
+            </div>
+            <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] p-2">
+              <div class="text-[var(--muted-foreground)]">Est. ETF Vorabpauschale</div>
+              <div id="taxVorab" class="sensitive font-mono font-semibold">€0</div>
+            </div>
+          </div>
+          <div id="taxAllowanceHint" class="text-xs text-[var(--muted-foreground)]"></div>
+        </div>
+      </div>
+
+      <!-- FFB KONTO & ETF SPARPLAN -->
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold">FFB Konto &amp; ETF Sparplan</h2>
+            <p class="text-xs text-[var(--muted-foreground)]">30% Teilfreistellung assumed for equity ETFs in Vorabpauschale estimate.</p>
+          </div>
+          <button onclick="addEtfRow()" class="px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-medium hover:border-[var(--primary)] transition">
+            + Add ETF
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse min-w-[540px]">
+            <thead>
+              <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                <th class="py-2 pr-2">ETF Name</th>
+                <th class="py-2 px-2">ISIN</th>
+                <th class="py-2 px-2 text-right">Current Value (€)</th>
+                <th class="py-2 px-2 text-right">Sparplan (€/mo)</th>
+                <th class="py-2 px-2 text-right">Exp. Return (%)</th>
+                <th class="py-2 px-2 text-right">Weight</th>
+                <th class="py-2 pl-2 text-right"></th>
+              </tr>
+            </thead>
+            <tbody id="etfTableBody" class="divide-y divide-[var(--border)]"></tbody>
+            <tfoot>
+              <tr class="border-t border-[var(--border)] font-bold">
+                <td colspan="2" class="py-2.5">Total FFB Depot</td>
+                <td id="etfTotalVal" class="sensitive py-2.5 px-2 text-right font-mono tabular-nums">€0</td>
+                <td id="etfTotalPlan" class="sensitive py-2.5 px-2 text-right font-mono tabular-nums">€0/mo</td>
+                <td id="etfAvgReturn" class="py-2.5 px-2 text-right font-mono tabular-nums">0%</td>
+                <td class="py-2.5 px-2 text-right font-mono">100%</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SOLIT & CASH -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Solit Edelmetalle (Gold &amp; Silber)</h2>
+            <span id="solitTotalBadge" class="sensitive text-sm font-mono font-bold text-[var(--warning)]">€0</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gold Holdings (grams)</label>
+              <input id="inSolitGoldG" type="number" step="1" min="0" oninput="updateField('solitGoldGrams', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gold Sparplan (€/mo)</label>
+              <input id="inSolitGoldPlan" type="number" step="25" min="0" oninput="updateField('solitGoldPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Silver Holdings (grams)</label>
+              <input id="inSolitSilverG" type="number" step="10" min="0" oninput="updateField('solitSilverGrams', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Silver Sparplan (€/mo)</label>
+              <input id="inSolitSilverPlan" type="number" step="25" min="0" oninput="updateField('solitSilverPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+          </div>
+          <div class="text-xs text-[var(--muted-foreground)] flex justify-between pt-2 border-t border-[var(--border)]">
+            <span id="solitSplitText" class="sensitive">Gold €0 · Silver €0</span>
+            <span id="solitPlanTotal" class="sensitive font-mono font-semibold text-[var(--foreground)]">€0/mo</span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Festgeld &amp; Tagesgeld</h2>
+            <span id="cashTotalBadge" class="sensitive text-sm font-mono font-bold text-[var(--success)]">€0</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Tagesgeld Stand (€)</label>
+              <input id="inTagesgeld" type="number" step="500" min="0" oninput="updateField('tagesgeld', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Tagesgeld Interest (%/yr)</label>
+              <input id="inTagesRate" type="number" step="0.1" min="0" max="10" oninput="updateField('tagesgeldRate', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Festgeld Stand (€)</label>
+              <input id="inFestgeld" type="number" step="500" min="0" oninput="updateField('festgeld', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Festgeld Interest (%/yr)</label>
+              <input id="inFestRate" type="number" step="0.1" min="0" max="10" oninput="updateField('festgeldRate', +this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+          </div>
+          <div class="text-xs text-[var(--muted-foreground)] flex justify-between pt-2 border-t border-[var(--border)]">
+            <span>Weighted Avg. Cash Yield</span>
+            <span id="cashInterestYearly" class="sensitive font-mono font-semibold text-[var(--foreground)]">€0/yr</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 4: PLANS, GOALS, PREDICTIONS & WHAT-IF STRATEGY       -->
+    <!-- ========================================================= -->
+    <section id="tab-strategy" class="hidden space-y-4">
+      <!-- INTERACTIVE WHAT-IF SIMULATOR + PROJECTION CHART -->
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold">Interactive Wealth Forecast &amp; What-If Sandbox</h2>
+            <p class="text-xs text-[var(--muted-foreground)]">Hover/tap along the chart to inspect any year. Drag sliders to simulate boosts without altering your saved plan.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] cursor-pointer">
+              <input id="toggleRealTerms" type="checkbox" checked onchange="renderAll()" class="accent-[var(--primary)]" />
+              Today's € (Real)
+            </label>
+            <button onclick="resetWhatIf()" class="text-xs text-[var(--primary)] hover:underline">Reset Sliders</button>
+          </div>
+        </div>
+
+        <!-- WHAT-IF SLIDERS -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-[var(--muted-foreground)]">Extra ETF Sparplan</span>
+              <span id="wiExtraEtfLabel" class="font-mono font-semibold text-[var(--primary)]">+€0/mo</span>
+            </div>
+            <input id="wiExtraEtf" type="range" min="0" max="1500" step="50" value="0" oninput="renderAll()" class="w-full accent-[var(--primary)]" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-[var(--muted-foreground)]">Simulate Retire Age</span>
+              <span id="wiRetireAgeLabel" class="font-mono font-semibold text-[var(--primary)]">67</span>
+            </div>
+            <input id="wiRetireAge" type="range" min="52" max="70" step="1" value="67" oninput="renderAll()" class="w-full accent-[var(--primary)]" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-[var(--muted-foreground)]">Safe Withdrawal Rate</span>
+              <span id="wiSwrLabel" class="font-mono font-semibold text-[var(--primary)]">3.5%</span>
+            </div>
+            <input id="wiSwr" type="range" min="2.5" max="4.5" step="0.1" value="3.5" oninput="renderAll()" class="w-full accent-[var(--primary)]" />
+          </div>
+        </div>
+
+        <!-- HOVER READOUT -->
+        <div id="chartHoverBar" class="flex flex-wrap items-center justify-between gap-2 text-xs px-1 text-[var(--muted-foreground)]">
+          <span>Move cursor across the chart to inspect any age</span>
+          <span id="wiRetireIncomePreview" class="sensitive font-mono font-semibold text-[var(--foreground)]"></span>
+        </div>
+
+        <!-- INTERACTIVE SVG CHART -->
+        <div class="w-full overflow-x-auto">
+          <svg id="projectionChart" viewBox="0 0 760 260" class="w-full h-64 sensitive cursor-crosshair"></svg>
+        </div>
+
+        <!-- SCENARIO CARDS -->
+        <div class="grid grid-cols-3 gap-3 text-xs">
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3">
+            <div class="text-[var(--muted-foreground)]">Conservative (-2%)</div>
+            <div id="projConservative" class="sensitive font-mono font-bold text-sm mt-0.5">€0</div>
+          </div>
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--primary)]/45 p-3">
+            <div class="text-[var(--primary)] font-semibold">Base Case</div>
+            <div id="projBase" class="sensitive font-mono font-bold text-sm mt-0.5">€0</div>
+          </div>
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3">
+            <div class="text-[var(--muted-foreground)]">Optimistic (+2%)</div>
+            <div id="projOptimistic" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">€0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOALS + SMART STRATEGY ENGINE -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-6 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Financial Goals &amp; ETA</h2>
+            <button onclick="addGoal()" class="px-2.5 py-1 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-medium hover:border-[var(--primary)]">+ Add Goal</button>
+          </div>
+          <div id="goalsList" class="space-y-2.5"></div>
+        </div>
+
+        <div class="lg:col-span-6 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Smart On-Device Strategy Engine</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">100% local rules</span>
+          </div>
+          <div id="strategyList" class="space-y-2.5 text-xs"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 5: ADVISOR & FINANCIAL INFO (DANIEL BOSSENZ)          -->
+    <!-- ========================================================= -->
+    <section id="tab-advisor" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- LEFT COLUMN: UPLOAD + ACTION CHECKLIST -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold">Daniel Bossenz — PDF &amp; Briefing Vault</h2>
+                <p class="text-xs text-[var(--muted-foreground)]">PDFs stay in your browser's local IndexedDB.</p>
+              </div>
+              <span id="pdfStorageBadge" class="text-xs font-mono text-[var(--muted-foreground)]">0 PDFs</span>
+            </div>
+
+            <label id="pdfDropZone"
+              class="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] bg-[var(--background)] p-5 text-center cursor-pointer transition">
+              <span class="text-2xl">📄</span>
+              <span class="text-xs font-semibold">Drop Daniel Bossenz PDF(s) or tap to browse</span>
+              <span class="text-xs text-[var(--muted-foreground)]">Quarterly reports, tax memos, FFB/Solit updates</span>
+              <input id="advisorPdfInput" type="file" accept="application/pdf,.pdf" multiple class="hidden" onchange="handlePdfUpload(event)" />
+            </label>
+
+            <div class="space-y-2 pt-2 border-t border-[var(--border)]">
+              <div class="text-xs font-semibold">Quick Briefing Note</div>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="advNoteTitle" type="text" placeholder="Title (e.g. Q4 Update)"
+                  class="rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-1.5 text-xs" />
+                <select id="advNoteCat" class="rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-xs">
+                  <option value="Quarterly Update">Quarterly Update</option>
+                  <option value="Tax / Steuer">Tax / Steuer</option>
+                  <option value="FFB / ETFs">FFB / ETFs</option>
+                  <option value="Solit / Metals">Solit / Metals</option>
+                  <option value="Retirement / bAV">Retirement / bAV</option>
+                  <option value="Good to Know">Good to Know</option>
+                </select>
+              </div>
+              <textarea id="advNoteSummary" rows="2" placeholder="Key takeaways or next steps from Daniel Bossenz..."
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-1.5 text-xs"></textarea>
+              <button onclick="addManualAdvisorNote()" class="w-full py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">
+                + Save Briefing Locally
+              </button>
+            </div>
+          </div>
+
+          <!-- ADVISOR ACTION CHECKLIST -->
+          <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Advisor Action Checklist</h2>
+              <span id="actionProgressBadge" class="text-xs font-mono text-[var(--muted-foreground)]">0/0 done</span>
+            </div>
+            <div class="flex gap-2">
+              <input id="newActionInput" type="text" placeholder="Add action item (e.g., Adjust Freistellungsauftrag)..."
+                onkeydown="if(event.key==='Enter') addAdvisorAction()"
+                class="flex-1 rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-1.5 text-xs focus:outline-none focus:border-[var(--primary)]" />
+              <button onclick="addAdvisorAction()" class="px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-semibold hover:border-[var(--primary)]">+</button>
+            </div>
+            <div id="advisorActionsList" class="space-y-1.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: SEARCHABLE KNOWLEDGE LIBRARY -->
+        <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-bold">Briefings &amp; PDF Archive</h2>
+            <div class="flex items-center gap-2">
+              <input id="advSearchInput" type="text" placeholder="Search archive..." oninput="renderAdvisorDocs()"
+                class="rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-1.5 text-xs w-40 sm:w-48" />
+              <select id="advFilterCat" onchange="renderAdvisorDocs()"
+                class="rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-xs">
+                <option value="ALL">All Categories</option>
+                <option value="Quarterly Update">Quarterly Update</option>
+                <option value="Tax / Steuer">Tax / Steuer</option>
+                <option value="FFB / ETFs">FFB / ETFs</option>
+                <option value="Solit / Metals">Solit / Metals</option>
+                <option value="Retirement / bAV">Retirement / bAV</option>
+                <option value="Good to Know">Good to Know</option>
+              </select>
+            </div>
+          </div>
+          <div id="advisorDocsList" class="space-y-2.5 max-h-[540px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <!-- INLINE PDF VIEWER MODAL -->
+      <div id="pdfPreviewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="w-full max-w-4xl h-[86vh] rounded-2xl bg-[var(--card)] border border-[var(--border)] flex flex-col overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+            <div class="text-sm font-bold truncate" id="pdfPreviewTitle">PDF Preview</div>
+            <div class="flex items-center gap-2">
+              <a id="pdfDownloadLink" download class="px-3 py-1 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:border-[var(--primary)]">⬇ Download</a>
+              <button onclick="closePdfPreview()" class="px-3 py-1 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs hover:text-[var(--error)]">✕ Close</button>
+            </div>
+          </div>
+          <iframe id="pdfPreviewFrame" class="w-full flex-1 bg-white"></iframe>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MOBILE BOTTOM NAVIGATION BAR (PIXEL / PHONE)              -->
+  <!-- ========================================================= -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-2 py-1.5 grid grid-cols-5 gap-1">
+    <button id="mobBtn-status" onclick="switchTab('status')" class="flex flex-col items-center py-1 rounded-xl text-xs font-medium text-[var(--primary)]">
+      <span>📊</span><span>Status</span>
+    </button>
+    <button id="mobBtn-retirement" onclick="switchTab('retirement')" class="flex flex-col items-center py-1 rounded-xl text-xs text-[var(--muted-foreground)]">
+      <span>🏛️</span><span>Retire</span>
+    </button>
+    <button id="mobBtn-investments" onclick="switchTab('investments')" class="flex flex-col items-center py-1 rounded-xl text-xs text-[var(--muted-foreground)]">
+      <span>📈</span><span>Invest</span>
+    </button>
+    <button id="mobBtn-strategy" onclick="switchTab('strategy')" class="flex flex-col items-center py-1 rounded-xl text-xs text-[var(--muted-foreground)]">
+      <span>🎯</span><span>Plan</span>
+    </button>
+    <button id="mobBtn-advisor" onclick="switchTab('advisor')" class="flex flex-col items-center py-1 rounded-xl text-xs text-[var(--muted-foreground)]">
+      <span>📁</span><span>Advisor</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: GEMINI GEM JSON BRIDGE                             -->
+  <!-- ========================================================= -->
+  <div id="geminiSetupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--card)] border border-[var(--border)] p-5 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h2 class="text-base font-bold">✨ Gemini Private Gem Bridge (Setup &amp; 1x/Q Merge)</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Smart partial merge: only fields returned by your Gemini Gem are updated — everything else stays untouched.</p>
+        </div>
+        <button onclick="closeGeminiSetupModal()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] px-2 py-1">✕</button>
+      </div>
+
+      <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold">1. Copy Instructions for your Permanent Gemini Gem</span>
+          <button id="copyPromptBtn" onclick="copyGeminiPrompt()" class="px-3 py-1 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">
+            📋 Copy Prompt
+          </button>
+        </div>
+        <pre id="geminiPromptText" class="text-xs font-mono text-[var(--muted-foreground)] whitespace-pre-wrap max-h-36 overflow-y-auto p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)]"></pre>
+      </div>
+
+      <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2">
+        <label class="block text-xs font-semibold">2. Paste Anonymized JSON from Gemini</label>
+        <textarea id="geminiJsonInput" rows="6" placeholder='Paste Gemini output here (```json fences are auto-stripped)...'
+          class="w-full rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 text-xs font-mono focus:outline-none focus:border-[var(--primary)]"></textarea>
+        <p id="geminiImportMsg" class="hidden text-xs"></p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2">
+        <button onclick="closeGeminiSetupModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)]">Cancel</button>
+        <button onclick="applyGeminiJson()" class="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">
+          ✓ Merge &amp; Log Snapshot
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: QUARTERLY MAINTENANCE CHECK-IN (1x / Q)            -->
+  <!-- ========================================================= -->
+  <div id="quarterlyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--card)] border border-[var(--border)] p-5 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h2 class="text-base font-bold">📅 Quarterly Check-In (60-Second Maintenance)</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Update only the balances that changed this quarter and auto-record a net worth snapshot.</p>
+        </div>
+        <button onclick="closeQuarterlyModal()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] px-2 py-1">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Tagesgeld Stand (€)</label>
+          <input id="qTagesgeld" type="number" step="100" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Festgeld Stand (€)</label>
+          <input id="qFestgeld" type="number" step="100" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">MetallRente Stand (€)</label>
+          <input id="qMetallBalance" type="number" step="100" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Avg. Monthly Spend (€)</label>
+          <input id="qMonthlySpend" type="number" step="50" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Solit Gold (grams)</label>
+          <input id="qSolitGold" type="number" step="1" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Solit Silver (grams)</label>
+          <input id="qSolitSilver" type="number" step="10" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="font-semibold">FFB ETF Current Values (€)</div>
+        <div id="qEtfInputs" class="space-y-1.5"></div>
+      </div>
+
+      <div class="space-y-1.5 text-xs pt-2 border-t border-[var(--border)]">
+        <label class="block font-semibold">Optional: Daniel Bossenz Quarterly Note</label>
+        <input id="qBossenzNote" type="text" placeholder="e.g., Q4: Rebalance EM, verify Freistellungsauftrag..."
+          class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2" />
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button onclick="closeQuarterlyModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)]">Cancel</button>
+        <button onclick="saveQuarterlyUpdate()" class="px-4 py-2 rounded-xl bg-[var(--success)] text-white text-xs font-semibold hover:opacity-90">
+          ✓ Save &amp; Log Quarter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: PASSPHRASE PROMPT (EXPORT / IMPORT)                -->
+  <!-- ========================================================= -->
+  <div id="pwPromptModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-[var(--card)] border border-[var(--border)] p-5 shadow-2xl space-y-3">
+      <h3 id="pwPromptTitle" class="text-sm font-bold">Passphrase Required</h3>
+      <p id="pwPromptDesc" class="text-xs text-[var(--muted-foreground)]"></p>
+      <input id="pwPromptInput" type="password" placeholder="Enter passphrase..." onkeydown="if(event.key==='Enter') resolvePwPrompt(true)"
+        class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]" />
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="resolvePwPrompt(false)" class="px-3 py-1.5 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)]">Cancel</button>
+        <button onclick="resolvePwPrompt(true)" class="px-4 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // THEME & PIXEL PWA INSTALLER / OFFLINE SERVICE WORKER
+    // =========================================================
+    let deferredInstallPrompt = null;
+
+    function initTheme() {
+      try {
+        const saved = localStorage.getItem("vaultde_theme");
+        if (saved === "dark" || saved === "light") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (e) {}
+    }
+
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute("data-theme");
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = cur ? cur === "dark" : prefersDark;
+      const next = isDark ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("vaultde_theme", next); } catch (e) {}
+      showToast(next === "dark" ? "🌙 Dark theme" : "☀️ Light theme");
+    }
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById("pwaInstallBtn");
+      if (btn) btn.classList.remove("hidden");
+    });
+
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      const btn = document.getElementById("pwaInstallBtn");
+      if (btn) btn.classList.add("hidden");
+      showToast("📲 VaultDE installed on your device!");
+    });
+
+    async function installPwa() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      document.getElementById("pwaInstallBtn")?.classList.add("hidden");
+    }
+
+    initTheme();
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+
+    // =========================================================
+    // STATE, DEFAULTS & UTILITIES
+    // =========================================================
+    const STORAGE_KEY = 'vaultde_state_v1';
+    const ENCRYPTED_KEY = 'vaultde_encrypted_v1';
+    const currentQuarterLabel = () => `${new Date().getFullYear()}-Q${Math.floor(new Date().getMonth() / 3) + 1}`;
+
+    const DEFAULT_STATE = {
+      grossSalary: 82000,
+      taxClass: 'I',
+      churchTax: 0,
+      healthType: 'GKV',
+      pkvMonthly: 420,
+      hasChildren: false,
+      age: 38,
+      retireAge: 67,
+      monthlySpend: 2450,
+      // Retirement
+      drvCurrentMonthly: 980,
+      drvProjectedMonthly: 2350,
+      drvGrowthRate: 1.5,
+      metallBalance: 24000,
+      metallMonthly: 320,
+      metallReturn: 4.5,
+      retireTargetMonthly: 3200,
+      inflation: 2.0,
+      // Investments
+      etfs: [
+        { name: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', value: 48500, monthlyPlan: 800, expReturn: 7.0 },
+        { name: 'iShares Core MSCI EM IMI', isin: 'IE00BKM4GZ66', value: 11500, monthlyPlan: 200, expReturn: 7.5 }
+      ],
+      solitGoldGrams: 120,
+      solitGoldPlan: 150,
+      solitSilverGrams: 1500,
+      solitSilverPlan: 50,
+      // Cash
+      tagesgeld: 15000,
+      tagesgeldRate: 2.75,
+      festgeld: 20000,
+      festgeldRate: 3.1,
+      // Market Oracle
+      market: { eurUsd: 1.08, goldEurPerG: 84.5, silverEurPerG: 0.96 },
+      // Goals
+      goals: [
+        { name: '6-Month Emergency Fund', target: 15000, targetYear: 2027, source: 'cash' },
+        { name: 'Sabbatical / Coast-FIRE Milestone', target: 250000, targetYear: 2036, source: 'invested' },
+        { name: 'Retirement Nest Egg (Age 67)', target: 750000, targetYear: 2055, source: 'total' }
+      ],
+      // Quarterly Net Worth History
+      history: [
+        { label: '2026-Q1', netWorth: 118400 },
+        { label: '2026-Q2', netWorth: 123900 },
+        { label: '2026-Q3', netWorth: 127200 },
+        { label: '2026-Q4', netWorth: 130580 }
+      ],
+      // Advisor Briefings & Action Items (Daniel Bossenz)
+      advisorDocs: [
+        {
+          id: 'demo-bossenz-q4',
+          title: 'Q4 Quarterly Market & Portfolio Briefing (Sample)',
+          advisor: 'Daniel Bossenz',
+          date: '2026-10-15',
+          category: 'Quarterly Update',
+          hasPdf: false,
+          fileSize: '',
+          summary: 'Review FFB ETF rebalancing, verify Freistellungsauftrag before Dec 31, and confirm MetallRente employer match.',
+          status: 'Action Needed'
+        }
+      ],
+      advisorActions: [
+        { id: 'act-1', text: 'Verify Freistellungsauftrag split across FFB & Tagesgeld bank', done: false },
+        { id: 'act-2', text: 'Check annual DRV Renteninformation letter when it arrives', done: true }
+      ]
+    };
+
+    let state = structuredClone(DEFAULT_STATE);
+    let activePassphrase = null;
+    let lockModalMode = 'unlock';
+    let privacyBlurred = false;
+    let activeTab = 'status';
+    let pwPromptResolver = null;
+    let lastProjectionData = null;
+
+    const fmtEUR = (n) => '€' + Math.round(n || 0).toLocaleString('de-DE');
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    function showToast(msg, tone = 'success') {
+      const box = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      const border = tone === 'error' ? 'border-[var(--error)]/50 text-[var(--error)]'
+                   : tone === 'warning' ? 'border-[var(--warning)]/50 text-[var(--warning)]'
+                   : 'border-[var(--success)]/50 text-[var(--success)]';
+      el.className = `toast-anim pointer-events-auto rounded-xl bg-[var(--card)] border ${border} px-3.5 py-2 text-xs font-medium shadow-lg`;
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.25s'; setTimeout(() => el.remove(), 250); }, 2800);
+    }
+
+    function askPassphrase(title, desc) {
+      return new Promise(resolve => {
+        pwPromptResolver = resolve;
+        document.getElementById('pwPromptTitle').textContent = title;
+        document.getElementById('pwPromptDesc').textContent = desc;
+        document.getElementById('pwPromptInput').value = '';
+        document.getElementById('pwPromptModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('pwPromptInput').focus(), 40);
+      });
+    }
+
+    function resolvePwPrompt(ok) {
+      const val = ok ? document.getElementById('pwPromptInput').value : null;
+      document.getElementById('pwPromptModal').classList.add('hidden');
+      if (pwPromptResolver) { pwPromptResolver(val); pwPromptResolver = null; }
+    }
+
+    function togglePrivacyBlur() {
+      privacyBlurred = !privacyBlurred;
+      document.body.classList.toggle('privacy-blur', privacyBlurred);
+      document.getElementById('privacyBlurBtn').textContent = privacyBlurred ? '👁 Show €' : '👁 Hide €';
+    }
+
+    // =========================================================
+    // CRYPTO ENGINE (AES-256-GCM + PBKDF2-SHA256)
+    // =========================================================
+    async function deriveKey(passphrase, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptJSON(obj, passphrase) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(passphrase, salt);
+      const data = new TextEncoder().encode(JSON.stringify(obj));
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+      return {
+        v: 2,
+        alg: 'AES-256-GCM',
+        kdf: 'PBKDF2-SHA256-250k',
+        salt: btoa(String.fromCharCode(...salt)),
+        iv: btoa(String.fromCharCode(...iv)),
+        ct: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+      };
+    }
+
+    async function decryptJSON(payload, passphrase) {
+      const salt = Uint8Array.from(atob(payload.salt), c => c.charCodeAt(0));
+      const iv = Uint8Array.from(atob(payload.iv), c => c.charCodeAt(0));
+      const ct = Uint8Array.from(atob(payload.ct), c => c.charCodeAt(0));
+      const key = await deriveKey(passphrase, salt);
+      const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+      return JSON.parse(new TextDecoder().decode(decrypted));
+    }
+
+    async function persistState() {
+      try {
+        if (activePassphrase) {
+          const enc = await encryptJSON(state, activePassphrase);
+          localStorage.setItem(ENCRYPTED_KEY, JSON.stringify(enc));
+          localStorage.removeItem(STORAGE_KEY);
+          updateEncryptBadge(true);
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          updateEncryptBadge(false);
+        }
+      } catch (e) {}
+    }
+
+    function updateEncryptBadge(isEncrypted) {
+      const el = document.getElementById('encryptBadge');
+      const btn = document.getElementById('encryptLockBtn');
+      if (isEncrypted) {
+        el.textContent = '🔒 AES-256';
+        el.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--success)]/15 text-[var(--success)] border border-[var(--success)]/25';
+        btn.textContent = '🔒 Lock Now';
+      } else {
+        el.textContent = '🔓 Unencrypted';
+        el.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--warning)]/15 text-[var(--warning)] border border-[var(--warning)]/25';
+        btn.textContent = '🔐 Encrypt';
+      }
+    }
+
+    function handleLockOrEncryptBtn() {
+      if (activePassphrase) {
+        activePassphrase = null;
+        openUnlockModal();
+        showToast('Vault locked', 'success');
+      } else {
+        openSetPassphraseModal();
+      }
+    }
+
+    function openSetPassphraseModal() {
+      lockModalMode = 'set';
+      document.getElementById('lockModalTitle').textContent = 'Encrypt Local Vault (AES-256-GCM)';
+      document.getElementById('lockModalDesc').textContent = 'Set a master passphrase. All numbers & notes will be encrypted on this device.';
+      document.getElementById('lockActionBtn').textContent = 'Encrypt & Protect';
+      document.getElementById('lockCancelBtn').classList.remove('hidden');
+      document.getElementById('vaultPassphraseInput').value = '';
+      document.getElementById('lockError').classList.add('hidden');
+      document.getElementById('lockModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('vaultPassphraseInput').focus(), 40);
+    }
+
+    function openUnlockModal() {
+      lockModalMode = 'unlock';
+      document.getElementById('lockModalTitle').textContent = 'Vault Locked (AES-256-GCM)';
+      document.getElementById('lockModalDesc').textContent = 'Enter your master passphrase to decrypt your local vault.';
+      document.getElementById('lockActionBtn').textContent = 'Unlock Vault';
+      document.getElementById('lockCancelBtn').classList.add('hidden');
+      document.getElementById('vaultPassphraseInput').value = '';
+      document.getElementById('lockError').classList.add('hidden');
+      document.getElementById('lockModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('vaultPassphraseInput').focus(), 40);
+    }
+
+    function closeLockModal() {
+      document.getElementById('lockModal').classList.add('hidden');
+    }
+
+    async function submitLockModal() {
+      const pw = document.getElementById('vaultPassphraseInput').value;
+      const errEl = document.getElementById('lockError');
+      if (!pw || pw.length < 4) {
+        errEl.textContent = 'Use a passphrase with at least 4 characters.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (lockModalMode === 'set') {
+        activePassphrase = pw;
+        await persistState();
+        closeLockModal();
+        showToast('✓ Vault encrypted with AES-256-GCM');
+      } else {
+        try {
+          const payload = JSON.parse(localStorage.getItem(ENCRYPTED_KEY));
+          const dec = await decryptJSON(payload, pw);
+          state = { ...structuredClone(DEFAULT_STATE), ...dec };
+          activePassphrase = pw;
+          updateEncryptBadge(true);
+          syncInputsFromState();
+          renderAll();
+          closeLockModal();
+          showToast('✓ Vault unlocked');
+        } catch (e) {
+          errEl.textContent = 'Incorrect passphrase — decryption failed.';
+          errEl.classList.remove('hidden');
+        }
+      }
+    }
+
+    async function exportEncryptedVault() {
+      let pw = activePassphrase;
+      if (!pw) {
+        pw = await askPassphrase('Encrypt Exported Backup', 'Choose a passphrase to encrypt your .vault.json file:');
+        if (!pw) return;
+      }
+      const payload = await encryptJSON(state, pw);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vaultde-${currentQuarterLabel()}-${new Date().toISOString().slice(0, 10)}.vault.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('⬇ Encrypted .vault.json exported');
+    }
+
+    function importVault(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const payload = JSON.parse(e.target.result);
+          if (payload.alg === 'AES-256-GCM') {
+            const pw = await askPassphrase('Decrypt Vault File', 'Enter the passphrase for ' + file.name);
+            if (!pw) return;
+            const dec = await decryptJSON(payload, pw);
+            state = { ...structuredClone(DEFAULT_STATE), ...dec };
+            activePassphrase = pw;
+          } else {
+            state = { ...structuredClone(DEFAULT_STATE), ...payload };
+          }
+          await persistState();
+          syncInputsFromState();
+          renderAll();
+          showToast('✓ Vault imported successfully');
+        } catch (err) {
+          showToast('Import failed: invalid file or wrong passphrase', 'error');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDemo() {
+      state = structuredClone(DEFAULT_STATE);
+      persistState();
+      syncInputsFromState();
+      renderAll();
+      showToast('Demo profile restored', 'warning');
+    }
+
+    // =========================================================
+    // GERMAN TAX & PAYROLL ENGINE (2025/2026)
+    // =========================================================
+    function calcGermanNetSalary(grossYearly, taxClass, churchTaxRate, healthType, pkvMonthly, hasChildren) {
+      const grossM = grossYearly / 12;
+      const rvBase = Math.min(grossYearly, 96600);
+      const kvBase = Math.min(grossYearly, 66150);
+      const rv = rvBase * 0.093;
+      const av = rvBase * 0.013;
+      const kv = healthType === 'PKV' ? (pkvMonthly || 0) * 12 : kvBase * 0.0855;
+      const pvRate = hasChildren ? 0.018 : 0.024;
+      const pv = healthType === 'PKV' ? 0 : kvBase * pvRate;
+      const socialYearly = rv + av + kv + pv;
+
+      let allowance = 12096;
+      if (taxClass === 'II') allowance += 4260;
+      if (taxClass === 'III') allowance *= 2;
+      if (taxClass === 'V' || taxClass === 'VI') allowance = 0;
+
+      const taxable = Math.max(0, grossYearly - socialYearly * 0.85 - 1230 - allowance);
+      let incomeTax = 0;
+      if (taxClass === 'III') incomeTax = calcProgressiveESt(taxable / 2) * 2;
+      else if (taxClass === 'V' || taxClass === 'VI') incomeTax = calcProgressiveESt(taxable * 1.15);
+      else incomeTax = calcProgressiveESt(taxable);
+
+      const soliThreshold = taxClass === 'III' ? 39900 : 19950;
+      const soli = incomeTax > soliThreshold ? Math.min((incomeTax - soliThreshold) * 0.119, incomeTax * 0.055) : 0;
+      const church = incomeTax * (churchTaxRate || 0);
+      const totalTax = incomeTax + soli + church;
+      const netYearly = Math.max(0, grossYearly - totalTax - socialYearly);
+
+      return {
+        grossMonthly: grossM,
+        taxMonthly: totalTax / 12,
+        socialMonthly: socialYearly / 12,
+        netMonthly: netYearly / 12,
+        effectiveRate: grossYearly > 0 ? ((totalTax + socialYearly) / grossYearly) * 100 : 0
+      };
+    }
+
+    function calcProgressiveESt(zvE) {
+      if (zvE <= 0) return 0;
+      if (zvE <= 55000) return zvE * (0.14 + (zvE / 55000) * 0.14);
+      if (zvE <= 265000) return 55000 * 0.28 + (zvE - 55000) * 0.42;
+      return 55000 * 0.28 + 210000 * 0.42 + (zvE - 265000) * 0.45;
+    }
+
+    // =========================================================
+    // ANONYMOUS PUBLIC MARKET ORACLE
+    // =========================================================
+    async function fetchAnonymousMarketData() {
+      const btn = document.getElementById('fetchMarketBtn');
+      const status = document.getElementById('mktStatus');
+      btn.disabled = true;
+      status.textContent = 'Syncing...';
+      status.className = 'font-mono text-xs mt-1 text-[var(--warning)]';
+
+      let fxOk = false;
+      try {
+        const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.rates?.USD) {
+            state.market.eurUsd = +data.rates.USD.toFixed(4);
+            document.getElementById('mktEurUsd').value = state.market.eurUsd;
+            fxOk = true;
+          }
+        }
+      } catch (e) {}
+
+      // Try public anonymous metals endpoint (gold/silver USD/oz -> EUR/g)
+      let metalsOk = false;
+      try {
+        const mRes = await fetch('https://api.gold-api.com/price/XAU');
+        const sRes = await fetch('https://api.gold-api.com/price/XAG');
+        if (mRes.ok && sRes.ok) {
+          const g = await mRes.json();
+          const s = await sRes.json();
+          if (g.price && s.price && state.market.eurUsd > 0) {
+            state.market.goldEurPerG = +(g.price / 31.1035 / state.market.eurUsd).toFixed(2);
+            state.market.silverEurPerG = +(s.price / 31.1035 / state.market.eurUsd).toFixed(2);
+            document.getElementById('mktGoldG').value = state.market.goldEurPerG;
+            document.getElementById('mktSilverG').value = state.market.silverEurPerG;
+            metalsOk = true;
+          }
+        }
+      } catch (e) {}
+
+      if (fxOk || metalsOk) {
+        status.textContent = metalsOk ? 'Live FX + Metals' : 'Live FX (0 B sent)';
+        status.className = 'font-mono text-xs mt-1 text-[var(--success)]';
+        persistState();
+        renderAll();
+        showToast(metalsOk ? '✓ Live FX, Gold & Silver synced anonymously' : '✓ Live EUR/USD synced anonymously');
+      } else {
+        status.textContent = 'Offline / Sandboxed';
+        status.className = 'font-mono text-xs mt-1 text-[var(--muted-foreground)]';
+        showToast('Offline sandbox — edit rates manually anytime', 'warning');
+      }
+      btn.disabled = false;
+    }
+
+    // =========================================================
+    // NAVIGATION & MUTATIONS
+    // =========================================================
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['status', 'retirement', 'investments', 'strategy', 'advisor'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tabId);
+        const btn = document.getElementById('tabBtn-' + t);
+        if (btn) btn.className = `tab-btn pb-2.5 text-sm whitespace-nowrap ${t === 'advisor' ? 'flex items-center gap-1.5 ' : ''}${t === tabId ? 'tab-active' : 'tab-inactive'}`;
+        const mBtn = document.getElementById('mobBtn-' + t);
+        if (mBtn) mBtn.className = `flex flex-col items-center py-1 rounded-xl text-xs ${t === tabId ? 'font-semibold text-[var(--primary)] bg-[var(--primary)]/10' : 'text-[var(--muted-foreground)]'}`;
+      });
+      renderAll();
+    }
+
+    function updateField(key, val) {
+      state[key] = val;
+      if (key === 'retireAge') document.getElementById('wiRetireAge').value = val;
+      persistState();
+      renderAll();
+    }
+
+    function updateMarket(key, val) {
+      state.market[key] = val || 0;
+      persistState();
+      renderAll();
+    }
+
+    function resetWhatIf() {
+      document.getElementById('wiExtraEtf').value = 0;
+      document.getElementById('wiRetireAge').value = state.retireAge || 67;
+      document.getElementById('wiSwr').value = 3.5;
+      renderAll();
+    }
+
+    function addEtfRow() {
+      state.etfs.push({ name: 'New ETF', isin: 'IE00...', value: 0, monthlyPlan: 100, expReturn: 6.5 });
+      persistState(); renderAll();
+    }
+    function updateEtf(i, f, v) { state.etfs[i][f] = v; persistState(); renderAll(); }
+    function removeEtf(i) { state.etfs.splice(i, 1); persistState(); renderAll(); }
+
+    function addGoal() {
+      state.goals.push({ name: 'New Goal', target: 50000, targetYear: new Date().getFullYear() + 5, source: 'invested' });
+      persistState(); renderAll();
+    }
+    function updateGoal(i, f, v) { state.goals[i][f] = v; persistState(); renderAll(); }
+    function removeGoal(i) { state.goals.splice(i, 1); persistState(); renderAll(); }
+
+    function logSnapshotNow(silent = false) {
+      const m = computeMetrics();
+      if (!state.history) state.history = [];
+      const lbl = currentQuarterLabel();
+      const existing = state.history.find(h => h.label === lbl);
+      if (existing) existing.netWorth = Math.round(m.netWorth);
+      else state.history.push({ label: lbl, netWorth: Math.round(m.netWorth) });
+      if (state.history.length > 12) state.history = state.history.slice(-12);
+      persistState();
+      renderAll();
+      if (!silent) showToast(`✓ Logged ${lbl} snapshot (${fmtEUR(m.netWorth)})`);
+    }
+
+    // =========================================================
+    // CORE METRICS & PROJECTION ENGINE
+    // =========================================================
+    function computeMetrics() {
+      const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+      const etfTotal = (state.etfs || []).reduce((s, e) => s + (Number(e.value) || 0), 0);
+      const etfPlan = (state.etfs || []).reduce((s, e) => s + (Number(e.monthlyPlan) || 0), 0);
+      const etfWeightedReturn = etfTotal > 0
+        ? state.etfs.reduce((s, e) => s + (Number(e.value) || 0) * (Number(e.expReturn) || 6.5), 0) / etfTotal
+        : 6.5;
+
+      const solitGoldVal = (state.solitGoldGrams || 0) * (state.market.goldEurPerG || 84.5);
+      const solitSilverVal = (state.solitSilverGrams || 0) * (state.market.silverEurPerG || 0.96);
+      const solitTotal = solitGoldVal + solitSilverVal;
+      const solitPlan = (state.solitGoldPlan || 0) + (state.solitSilverPlan || 0);
+
+      const cashTotal = (state.tagesgeld || 0) + (state.festgeld || 0);
+      const cashInterest = (state.tagesgeld || 0) * ((state.tagesgeldRate || 0) / 100)
+                         + (state.festgeld || 0) * ((state.festgeldRate || 0) / 100);
+      const cashAvgYield = cashTotal > 0 ? (cashInterest / cashTotal) * 100 : 0;
+
+      // German Vorabpauschale estimate: Basiszins ~2.53% * 0.7 * 0.7 (30% Teilfreistellung)
+      const estVorabpauschale = etfTotal * 0.0253 * 0.7 * 0.7;
+      const sparerCap = (state.taxClass === 'III' || state.taxClass === 'IV') ? 2000 : 1000;
+
+      const metallTotal = state.metallBalance || 0;
+      const netWorth = cashTotal + etfTotal + solitTotal + metallTotal;
+      const monthlySurplus = pay.netMonthly - (state.monthlySpend || 0);
+      const sparquote = pay.netMonthly > 0 ? (monthlySurplus / pay.netMonthly) * 100 : 0;
+      const runwayMonths = state.monthlySpend > 0 ? cashTotal / state.monthlySpend : 0;
+
+      // What-If parameters
+      const wiExtraEtf = +(document.getElementById('wiExtraEtf')?.value || 0);
+      const wiRetireAge = +(document.getElementById('wiRetireAge')?.value || state.retireAge || 67);
+      const wiSwr = +(document.getElementById('wiSwr')?.value || 3.5) / 100;
+
+      const yearsToRetire = Math.max(1, (state.retireAge || 67) - (state.age || 35));
+      const simYears = Math.max(1, wiRetireAge - (state.age || 35));
+      const infl = (state.inflation || 2) / 100;
+      const inflFactor = Math.pow(1 + infl, yearsToRetire);
+
+      // MetallRente (approx 22% combined tax + KV/PV on bAV payout in retirement)
+      const rM = (state.metallReturn || 4.5) / 100 / 12;
+      const nM = yearsToRetire * 12;
+      const metallFutureNom = metallTotal * Math.pow(1 + rM, nM) + (state.metallMonthly || 0) * ((Math.pow(1 + rM, nM) - 1) / (rM || 1));
+      const metallFutureReal = metallFutureNom / inflFactor;
+      const metallMonthlyReal = ((metallFutureReal * 0.042) / 12) * 0.78;
+
+      // DRV net real (~15% KVdR + income tax approx)
+      const drvNom = (state.drvProjectedMonthly || 0) * Math.pow(1 + (state.drvGrowthRate || 1.5) / 100, yearsToRetire);
+      const drvReal = (drvNom / inflFactor) * 0.85;
+
+      const buildSeries = (deltaReturn, yrs, extraEtfMo) => {
+        const pts = [];
+        let etf = etfTotal, solit = solitTotal, cash = cashTotal, metall = metallTotal;
+        const rEtf = Math.max(0.01, (etfWeightedReturn + deltaReturn) / 100);
+        const rSolit = Math.max(0.01, (4.0 + deltaReturn * 0.5) / 100);
+        const rCash = Math.max(0.005, cashAvgYield / 100);
+        const rMet = Math.max(0.01, ((state.metallReturn || 4.5) + deltaReturn * 0.5) / 100);
+        const useReal = document.getElementById('toggleRealTerms')?.checked ?? true;
+        const baseYear = new Date().getFullYear();
+
+        for (let y = 0; y <= yrs; y++) {
+          const defl = useReal ? Math.pow(1 + infl, y) : 1;
+          pts.push({
+            age: (state.age || 35) + y,
+            year: baseYear + y,
+            total: (etf + solit + cash + metall) / defl,
+            privateOnly: (etf + solit + cash) / defl
+          });
+          etf = etf * (1 + rEtf) + (etfPlan + extraEtfMo) * 12;
+          solit = solit * (1 + rSolit) + solitPlan * 12;
+          cash = cash * (1 + rCash);
+          metall = metall * (1 + rMet) + (state.metallMonthly || 0) * 12;
+        }
+        return pts;
+      };
+
+      const baselineSeries = buildSeries(0, yearsToRetire, 0);
+      const baseSeries = buildSeries(0, simYears, wiExtraEtf);
+      const consSeries = buildSeries(-2, simYears, wiExtraEtf);
+      const optSeries = buildSeries(2, simYears, wiExtraEtf);
+
+      const privateAtRetireReal = baselineSeries[baselineSeries.length - 1].privateOnly;
+      const privateMonthlyReal = (privateAtRetireReal * 0.035) / 12;
+
+      const simPrivateAtRetire = baseSeries[baseSeries.length - 1].privateOnly;
+      const simMonthlyIncome = drvReal + metallMonthlyReal + (simPrivateAtRetire * wiSwr) / 12;
+
+      // Drawdown simulator (Real €, Age retireAge -> 95)
+      const drawdown = [];
+      let bal = privateAtRetireReal;
+      const neededFromPrivateMonthly = Math.max(0, (state.retireTargetMonthly || 3000) - (drvReal + metallMonthlyReal));
+      const realPostRetireReturn = Math.max(0.005, (etfWeightedReturn / 100 - infl) * 0.55); // de-risked balanced portfolio
+      const startAge = state.retireAge || 67;
+      for (let a = startAge; a <= 95; a++) {
+        drawdown.push({ age: a, balance: Math.max(0, bal) });
+        bal = bal * (1 + realPostRetireReturn) - neededFromPrivateMonthly * 12;
+      }
+
+      return {
+        pay, etfTotal, etfPlan, etfWeightedReturn,
+        solitGoldVal, solitSilverVal, solitTotal, solitPlan,
+        cashTotal, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
+        metallTotal, netWorth, monthlySurplus, sparquote, runwayMonths,
+        yearsToRetire, metallFutureNom, metallMonthlyReal, drvReal,
+        privateMonthlyReal, baseSeries, consSeries, optSeries,
+        wiExtraEtf, wiRetireAge, wiSwr, simMonthlyIncome, drawdown
+      };
+    }
+
+    // =========================================================
+    // RENDERING
+    // =========================================================
+    function renderAll() {
+      const m = computeMetrics();
+      document.getElementById('pkvBox').classList.toggle('hidden', state.healthType !== 'PKV');
+
+      // Last Quarter Badge & QoQ Delta
+      const hist = state.history || [];
+      if (hist.length) {
+        const last = hist[hist.length - 1];
+        document.getElementById('lastQuarterBadge').textContent = `Last Q: ${last.label}`;
+        if (hist.length >= 2) {
+          const prev = hist[hist.length - 2].netWorth || 1;
+          const diff = m.netWorth - prev;
+          const pct = (diff / prev) * 100;
+          const deltaEl = document.getElementById('kpiQoQDelta');
+          deltaEl.textContent = `${diff >= 0 ? '+' : ''}${pct.toFixed(1)}% vs ${hist[hist.length - 2].label}`;
+          deltaEl.className = `font-mono ${diff >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`;
+        }
+      }
+
+      // Open advisor actions banner
+      const openActions = (state.advisorActions || []).filter(a => !a.done).length;
+      const pendingDocs = (state.advisorDocs || []).filter(d => d.status === 'Action Needed').length;
+      const totalAttention = openActions + pendingDocs;
+      const badgeCount = document.getElementById('advisorBadgeCount');
+      const banner = document.getElementById('statusAdvisorBanner');
+      if (totalAttention > 0) {
+        badgeCount.textContent = totalAttention;
+        badgeCount.classList.remove('hidden');
+        banner.classList.remove('hidden');
+        document.getElementById('statusAdvisorBannerText').textContent =
+          `Daniel Bossenz: ${openActions} checklist item(s) & ${pendingDocs} briefing(s) flagged for review.`;
+      } else {
+        badgeCount.classList.add('hidden');
+        banner.classList.add('hidden');
+      }
+
+      // TAB 1 KPIs & Paycheck Bar
+      document.getElementById('kpiNetWorth').textContent = fmtEUR(m.netWorth);
+      document.getElementById('kpiNetMonthly').textContent = fmtEUR(m.pay.netMonthly);
+      document.getElementById('kpiTaxRate').textContent = `Class ${state.taxClass} · ${state.healthType} · ${m.pay.effectiveRate.toFixed(1)}% ded.`;
+      document.getElementById('kpiSurplus').textContent = (m.monthlySurplus >= 0 ? '+' : '') + fmtEUR(m.monthlySurplus);
+      document.getElementById('kpiSurplus').className = `sensitive text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1 ${m.monthlySurplus >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`;
+      document.getElementById('kpiSparquote').textContent = `${m.sparquote.toFixed(1)}% savings rate`;
+      document.getElementById('kpiRunway').textContent = `${m.runwayMonths.toFixed(1)} mo`;
+      document.getElementById('kpiRunwaySub').textContent = `${fmtEUR(m.cashTotal)} cash buffer`;
+      document.getElementById('statusMonthlyInvest').textContent = `${fmtEUR(m.etfPlan + m.solitPlan)}/mo Sparplan`;
+
+      document.getElementById('tbGross').textContent = fmtEUR(m.pay.grossMonthly);
+      document.getElementById('tbTax').textContent = '-' + fmtEUR(m.pay.taxMonthly);
+      document.getElementById('tbSocial').textContent = '-' + fmtEUR(m.pay.socialMonthly);
+      document.getElementById('tbNet').textContent = fmtEUR(m.pay.netMonthly);
+
+      const gM = m.pay.grossMonthly || 1;
+      const pTax = (m.pay.taxMonthly / gM) * 100;
+      const pSoc = (m.pay.socialMonthly / gM) * 100;
+      const pSpend = Math.min(100 - pTax - pSoc, ((state.monthlySpend || 0) / gM) * 100);
+      const pSave = Math.max(0, 100 - pTax - pSoc - pSpend);
+      document.getElementById('paycheckBar').innerHTML = `
+        <div style="width:${pTax.toFixed(1)}%; background:var(--error)" title="Tax"></div>
+        <div style="width:${pSoc.toFixed(1)}%; background:var(--warning)" title="Social"></div>
+        <div style="width:${pSpend.toFixed(1)}%; background:var(--muted-foreground)" title="Spending"></div>
+        <div style="width:${pSave.toFixed(1)}%; background:var(--success)" title="Surplus"></div>`;
+
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan);
+      document.getElementById('cashflowUnallocated').textContent =
+        unalloc >= 0 ? `Free cash after Sparpläne: +${fmtEUR(unalloc)}/mo` : `Sparpläne exceed surplus by ${fmtEUR(Math.abs(unalloc))}/mo`;
+
+      renderDonut([
+        { label: 'FFB ETFs', value: m.etfTotal, color: 'var(--chart-1)' },
+        { label: 'Tages- & Festgeld', value: m.cashTotal, color: 'var(--chart-2)' },
+        { label: 'MetallRente (bAV)', value: m.metallTotal, color: 'var(--chart-3)' },
+        { label: 'Solit Metals', value: m.solitTotal, color: 'var(--chart-4)' }
+      ]);
+      renderHistorySparkline();
+
+      // TAB 2 RETIREMENT
+      document.getElementById('outDrvReal').textContent = `${fmtEUR(m.drvReal)}/mo`;
+      document.getElementById('outMetallCapital').textContent = fmtEUR(m.metallFutureNom);
+      document.getElementById('outMetallReal').textContent = `${fmtEUR(m.metallMonthlyReal)}/mo`;
+      const baseRet = m.drvReal + m.metallMonthlyReal;
+      const totalRet = baseRet + m.privateMonthlyReal;
+      const gap = totalRet - (state.retireTargetMonthly || 0);
+      document.getElementById('retBaseIncome').textContent = `${fmtEUR(baseRet)}/mo`;
+      document.getElementById('retPrivateIncome').textContent = `${fmtEUR(m.privateMonthlyReal)}/mo`;
+      const gapEl = document.getElementById('retGapStatus');
+      gapEl.textContent = `${gap >= 0 ? '+' : ''}${fmtEUR(gap)}/mo (${gap >= 0 ? 'Surplus' : 'Gap'})`;
+      gapEl.className = `sensitive font-mono ${gap >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`;
+      document.getElementById('retYearsLeft').textContent = `${m.yearsToRetire} yrs left`;
+      document.getElementById('ddStartAge').textContent = state.retireAge || 67;
+
+      renderRetirementBars(m.drvReal, m.metallMonthlyReal, m.privateMonthlyReal, state.retireTargetMonthly || 3000);
+      renderDrawdownChart(m.drawdown);
+
+      // TAB 3 INVESTMENTS & TAX SHIELD
+      const totalTaxableYield = m.cashInterest + m.estVorabpauschale;
+      const capPct = Math.min(100, (totalTaxableYield / m.sparerCap) * 100);
+      document.getElementById('taxAllowanceCap').textContent = `${fmtEUR(totalTaxableYield)} / ${fmtEUR(m.sparerCap)}`;
+      const bar = document.getElementById('taxAllowanceBar');
+      bar.style.width = `${capPct.toFixed(1)}%`;
+      bar.style.background = totalTaxableYield > m.sparerCap ? 'var(--warning)' : 'var(--success)';
+      document.getElementById('taxCashInt').textContent = fmtEUR(m.cashInterest);
+      document.getElementById('taxVorab').textContent = fmtEUR(m.estVorabpauschale);
+      document.getElementById('taxAllowanceHint').textContent = totalTaxableYield > m.sparerCap
+        ? `Exceeds Sparer-Pauschbetrag by ${fmtEUR(totalTaxableYield - m.sparerCap)} (~${fmtEUR((totalTaxableYield - m.sparerCap) * 0.26375)} est. Abgeltungsteuer).`
+        : `${fmtEUR(m.sparerCap - totalTaxableYield)} of tax-free Freistellungsauftrag still unused this year.`;
+
+      renderEtfTable(m);
+      document.getElementById('solitTotalBadge').textContent = fmtEUR(m.solitTotal);
+      document.getElementById('solitSplitText').textContent = `Gold ${fmtEUR(m.solitGoldVal)} · Silver ${fmtEUR(m.solitSilverVal)}`;
+      document.getElementById('solitPlanTotal').textContent = `${fmtEUR(m.solitPlan)}/mo`;
+      document.getElementById('cashTotalBadge').textContent = fmtEUR(m.cashTotal);
+      document.getElementById('cashInterestYearly').textContent = `${m.cashAvgYield.toFixed(2)}% · ${fmtEUR(m.cashInterest)}/yr`;
+
+      // TAB 4 WHAT-IF, PROJECTIONS, GOALS & STRATEGY
+      document.getElementById('wiExtraEtfLabel').textContent = `+${fmtEUR(m.wiExtraEtf)}/mo`;
+      document.getElementById('wiRetireAgeLabel').textContent = `Age ${m.wiRetireAge}`;
+      document.getElementById('wiSwrLabel').textContent = `${(m.wiSwr * 100).toFixed(1)}%`;
+      document.getElementById('wiRetireIncomePreview').textContent = `Simulated Retirement Income: ${fmtEUR(m.simMonthlyIncome)}/mo`;
+
+      lastProjectionData = { cons: m.consSeries, base: m.baseSeries, opt: m.optSeries };
+      renderProjectionChart(m.consSeries, m.baseSeries, m.optSeries);
+      document.getElementById('projConservative').textContent = fmtEUR(m.consSeries[m.consSeries.length - 1].total);
+      document.getElementById('projBase').textContent = fmtEUR(m.baseSeries[m.baseSeries.length - 1].total);
+      document.getElementById('projOptimistic').textContent = fmtEUR(m.optSeries[m.optSeries.length - 1].total);
+
+      renderGoals(m);
+      renderStrategy(m);
+      renderAdvisorDocs();
+      renderAdvisorActions();
+    }
+
+    function renderDonut(slices) {
+      const svg = document.getElementById('allocationDonut');
+      const legend = document.getElementById('allocationLegend');
+      const total = slices.reduce((s, x) => s + x.value, 0) || 1;
+      const r = 64, cx = 90, cy = 90, circ = 2 * Math.PI * r;
+      let offset = 0;
+
+      svg.innerHTML = slices.map(s => {
+        const dash = (s.value / total) * circ;
+        const el = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="22"
+          stroke-dasharray="${dash} ${circ - dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" />`;
+        offset += dash;
+        return el;
+      }).join('') + `<text x="${cx}" y="${cy - 4}" text-anchor="middle" fill="var(--foreground)" font-size="14" font-weight="700" font-family="monospace">${fmtEUR(total)}</text>
+        <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="var(--muted-foreground)" font-size="11">Total Wealth</text>`;
+
+      legend.innerHTML = slices.map(s => {
+        const pct = ((s.value / total) * 100).toFixed(1);
+        return `<div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${s.color}"></span>
+            <span class="text-[var(--muted-foreground)] truncate">${s.label}</span>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="font-mono tabular-nums font-semibold">${pct}%</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderHistorySparkline() {
+      const svg = document.getElementById('historySparkline');
+      const hist = state.history || [];
+      if (hist.length < 2) {
+        svg.innerHTML = `<text x="180" y="48" text-anchor="middle" fill="var(--muted-foreground)" font-size="12">Log 2+ quarters to see trend</text>`;
+        return;
+      }
+      const W = 360, H = 88, padX = 24, padT = 16, padB = 20;
+      const vals = hist.map(h => h.netWorth);
+      const minV = Math.min(...vals) * 0.94, maxV = Math.max(...vals) * 1.03 || 1;
+      const x = (i) => padX + (i / (hist.length - 1)) * (W - padX * 2);
+      const y = (v) => padT + (1 - (v - minV) / (maxV - minV || 1)) * (H - padT - padB);
+      const pts = hist.map((h, i) => `${x(i).toFixed(1)},${y(h.netWorth).toFixed(1)}`).join(' ');
+      const area = `${x(0)},${H - padB} ${pts} ${x(hist.length - 1)},${H - padB}`;
+
+      svg.innerHTML = `
+        <polygon points="${area}" fill="var(--primary)" opacity="0.12" />
+        <polyline points="${pts}" fill="none" stroke="var(--primary)" stroke-width="2.2" />
+        ${hist.map((h, i) => `
+          <circle cx="${x(i)}" cy="${y(h.netWorth)}" r="3.5" fill="var(--primary)" />
+          <text x="${x(i)}" y="${H - 4}" text-anchor="middle" fill="var(--muted-foreground)" font-size="10" font-family="monospace">${h.label.slice(-2)}</text>
+        `).join('')}`;
+    }
+
+    function renderRetirementBars(drv, metall, priv, target) {
+      const maxVal = Math.max(target, drv + metall + priv, 1000);
+      const pct = (v) => Math.min(100, (v / maxVal) * 100).toFixed(1);
+      const rows = [
+        { label: 'Layer 1 · DRV (Net Real)', val: drv, color: 'var(--chart-1)' },
+        { label: 'Layer 2 · MetallRente (Net Real)', val: metall, color: 'var(--chart-3)' },
+        { label: 'Layer 3 · Private Portfolio (3.5% SWR)', val: priv, color: 'var(--chart-2)' }
+      ];
+      document.getElementById('retirementBarContainer').innerHTML = rows.map(r => `
+        <div class="space-y-1 text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">${r.label}</span>
+            <span class="sensitive font-mono font-semibold">${fmtEUR(r.val)}/mo</span>
+          </div>
+          <div class="w-full h-2.5 rounded-full bg-[var(--background)] overflow-hidden">
+            <div style="width:${pct(r.val)}%; background:${r.color}" class="h-full rounded-full"></div>
+          </div>
+        </div>`).join('') + `
+        <div class="pt-2 border-t border-[var(--border)] flex justify-between text-xs font-semibold">
+          <span>Combined vs. Target (${fmtEUR(target)}/mo)</span>
+          <span class="sensitive font-mono text-[var(--primary)]">${Math.round(((drv + metall + priv) / (target || 1)) * 100)}% funded</span>
+        </div>`;
+    }
+
+    function renderDrawdownChart(series) {
+      const svg = document.getElementById('drawdownChart');
+      const verdict = document.getElementById('drawdownVerdict');
+      if (!series.length) return;
+      const endBal = series[series.length - 1].balance;
+      const depleted = series.find(p => p.balance <= 0);
+      if (!depleted) {
+        verdict.textContent = `✓ Lasts past Age 95 (${fmtEUR(endBal)} left)`;
+        verdict.className = 'sensitive text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--success)]/15 text-[var(--success)]';
+      } else {
+        verdict.textContent = `⚠ Depletes around Age ${depleted.age}`;
+        verdict.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--error)]/15 text-[var(--error)]';
+      }
+
+      const W = 560, H = 155, padL = 56, padR = 16, padT = 14, padB = 24;
+      const maxY = Math.max(...series.map(p => p.balance), 50000);
+      const n = series.length - 1 || 1;
+      const x = (i) => padL + (i / n) * (W - padL - padR);
+      const y = (v) => padT + (1 - v / maxY) * (H - padT - padB);
+      const d = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.balance).toFixed(1)}`).join(' ');
+      const area = `${d} L${x(n).toFixed(1)},${H - padB} L${x(0).toFixed(1)},${H - padB} Z`;
+      const stroke = depleted ? 'var(--error)' : 'var(--success)';
+
+      svg.innerHTML = `
+        <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="var(--border)" />
+        <line x1="${padL}" y1="${padT}" x2="${W - padR}" y2="${padT}" stroke="var(--border)" stroke-dasharray="3,3" />
+        <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" fill="var(--muted-foreground)" font-size="10" font-family="monospace">${fmtEUR(maxY)}</text>
+        <text x="${padL - 6}" y="${H - padB + 4}" text-anchor="end" fill="var(--muted-foreground)" font-size="10" font-family="monospace">€0</text>
+        <text x="${x(0)}" y="${H - 6}" text-anchor="middle" fill="var(--muted-foreground)" font-size="10" font-family="monospace">Age ${series[0].age}</text>
+        <text x="${x(Math.floor(n / 2))}" y="${H - 6}" text-anchor="middle" fill="var(--muted-foreground)" font-size="10" font-family="monospace">Age ${series[Math.floor(n / 2)].age}</text>
+        <text x="${x(n)}" y="${H - 6}" text-anchor="middle" fill="var(--muted-foreground)" font-size="10" font-family="monospace">Age 95</text>
+        <path d="${area}" fill="${stroke}" opacity="0.14" />
+        <path d="${d}" fill="none" stroke="${stroke}" stroke-width="2.2" />`;
+    }
+
+    function renderEtfTable(m) {
+      const tbody = document.getElementById('etfTableBody');
+      const tot = m.etfTotal || 1;
+      tbody.innerHTML = (state.etfs || []).map((e, i) => `
+        <tr>
+          <td class="py-2 pr-2"><input value="${esc(e.name)}" onchange="updateEtf(${i}, 'name', this.value)" class="w-full bg-transparent border-b border-transparent focus:border-[var(--primary)] focus:outline-none" /></td>
+          <td class="py-2 px-2"><input value="${esc(e.isin)}" onchange="updateEtf(${i}, 'isin', this.value)" class="w-28 bg-transparent font-mono border-b border-transparent focus:border-[var(--primary)] focus:outline-none" /></td>
+          <td class="py-2 px-2 text-right"><input type="number" value="${e.value}" onchange="updateEtf(${i}, 'value', +this.value)" class="sensitive w-24 text-right bg-transparent font-mono tabular-nums border-b border-transparent focus:border-[var(--primary)] focus:outline-none" /></td>
+          <td class="py-2 px-2 text-right"><input type="number" value="${e.monthlyPlan}" onchange="updateEtf(${i}, 'monthlyPlan', +this.value)" class="sensitive w-20 text-right bg-transparent font-mono tabular-nums border-b border-transparent focus:border-[var(--primary)] focus:outline-none" /></td>
+          <td class="py-2 px-2 text-right"><input type="number" step="0.5" value="${e.expReturn}" onchange="updateEtf(${i}, 'expReturn', +this.value)" class="w-16 text-right bg-transparent font-mono tabular-nums border-b border-transparent focus:border-[var(--primary)] focus:outline-none" /></td>
+          <td class="py-2 px-2 text-right font-mono text-[var(--muted-foreground)]">${(((e.value || 0) / tot) * 100).toFixed(0)}%</td>
+          <td class="py-2 pl-2 text-right"><button onclick="removeEtf(${i})" class="text-[var(--muted-foreground)] hover:text-[var(--error)]">✕</button></td>
+        </tr>`).join('');
+      document.getElementById('etfTotalVal').textContent = fmtEUR(m.etfTotal);
+      document.getElementById('etfTotalPlan').textContent = `${fmtEUR(m.etfPlan)}/mo`;
+      document.getElementById('etfAvgReturn').textContent = `${m.etfWeightedReturn.toFixed(1)}%`;
+    }
+
+    function renderProjectionChart(cons, base, opt, hoverIdx = -1) {
+      const svg = document.getElementById('projectionChart');
+      const W = 760, H = 250, padL = 66, padR = 20, padT = 16, padB = 30;
+      const maxY = Math.max(...opt.map(p => p.total), 10000);
+      const n = base.length - 1 || 1;
+      const x = (i) => padL + (i / n) * (W - padL - padR);
+      const y = (v) => padT + (1 - v / maxY) * (H - padT - padB);
+
+      const path = (arr) => arr.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ');
+      const band = `${path(opt)} ` + cons.slice().reverse().map((p, idx) => `L${x(n - idx).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ') + ' Z';
+
+      const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
+        const val = maxY * f, yy = y(val);
+        return `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="var(--border)" stroke-dasharray="3,3" />
+          <text x="${padL - 8}" y="${yy + 4}" text-anchor="end" fill="var(--muted-foreground)" font-size="11" font-family="monospace">${fmtEUR(val)}</text>`;
+      }).join('');
+
+      const xLabels = [0, Math.floor(n / 3), Math.floor((2 * n) / 3), n].map(i =>
+        `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" fill="var(--muted-foreground)" font-size="11" font-family="monospace">Age ${base[i].age}</text>`
+      ).join('');
+
+      let hoverEl = '';
+      if (hoverIdx >= 0 && hoverIdx <= n) {
+        const hx = x(hoverIdx);
+        hoverEl = `<line x1="${hx}" y1="${padT}" x2="${hx}" y2="${H - padB}" stroke="var(--primary)" stroke-dasharray="3,3" />
+          <circle cx="${hx}" cy="${y(cons[hoverIdx].total)}" r="4" fill="var(--muted-foreground)" />
+          <circle cx="${hx}" cy="${y(base[hoverIdx].total)}" r="5" fill="var(--primary)" />
+          <circle cx="${hx}" cy="${y(opt[hoverIdx].total)}" r="4" fill="var(--success)" />`;
+      }
+
+      svg.innerHTML = gridY + xLabels +
+        `<path d="${band}" fill="var(--primary)" opacity="0.08" />` +
+        `<path d="${path(cons)}" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-dasharray="4,4" />` +
+        `<path d="${path(opt)}" fill="none" stroke="var(--success)" stroke-width="1.5" stroke-dasharray="4,4" />` +
+        `<path d="${path(base)}" fill="none" stroke="var(--primary)" stroke-width="2.6" />` + hoverEl;
+    }
+
+    function renderGoals(m) {
+      const el = document.getElementById('goalsList');
+      el.innerHTML = (state.goals || []).map((g, i) => {
+        const current = g.source === 'cash' ? m.cashTotal : g.source === 'invested' ? (m.etfTotal + m.solitTotal) : m.netWorth;
+        const pct = Math.min(100, (current / (g.target || 1)) * 100);
+        const hit = m.baseSeries.find(p => (g.source === 'total' ? p.total : p.privateOnly) >= (g.target || 0));
+        const eta = current >= g.target ? '✓ Reached' : hit ? `Est. ${hit.year} (Age ${hit.age})` : 'Beyond Retire Age';
+        return `<div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <input value="${esc(g.name)}" onchange="updateGoal(${i}, 'name', this.value)" class="font-semibold bg-transparent focus:outline-none flex-1" />
+            <div class="flex items-center gap-1.5">
+              <span class="text-[var(--muted-foreground)]">€</span>
+              <input type="number" value="${g.target}" onchange="updateGoal(${i}, 'target', +this.value)" class="sensitive w-20 text-right font-mono bg-transparent border-b border-[var(--border)]" />
+              <button onclick="removeGoal(${i})" class="text-[var(--muted-foreground)] hover:text-[var(--error)]">✕</button>
+            </div>
+          </div>
+          <div class="w-full h-2 rounded-full bg-[var(--card)] overflow-hidden">
+            <div style="width:${pct.toFixed(1)}%; background:${pct >= 100 ? 'var(--success)' : 'var(--primary)'}" class="h-full rounded-full"></div>
+          </div>
+          <div class="flex justify-between text-[var(--muted-foreground)]">
+            <span class="sensitive">${fmtEUR(current)} (${pct.toFixed(0)}%)</span>
+            <span class="font-mono ${pct >= 100 ? 'text-[var(--success)]' : ''}">${eta}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderStrategy(m) {
+      const tips = [];
+      if (m.runwayMonths < 3) {
+        tips.push({ tone: 'error', title: 'Build Emergency Buffer First', body: `Cash covers ${m.runwayMonths.toFixed(1)} months of spending. Target 3–6 months (${fmtEUR(state.monthlySpend * 3)}–${fmtEUR(state.monthlySpend * 6)}).` });
+      } else if (m.runwayMonths > 12) {
+        tips.push({ tone: 'warning', title: 'Cash Drag Above 12 Months', body: `You hold ${m.runwayMonths.toFixed(1)} months in Tages-/Festgeld. Deploying excess into your FFB ETF Sparplan boosts long-term compounding.` });
+      } else {
+        tips.push({ tone: 'success', title: 'Optimal Emergency Buffer', body: `${m.runwayMonths.toFixed(1)} months of spending safely parked in Tagesgeld & Festgeld.` });
+      }
+
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan);
+      if (unalloc > 250) {
+        tips.push({ tone: 'primary', title: `Unallocated Monthly Surplus (+${fmtEUR(unalloc)}/mo)`, body: `After spending and automated Sparpläne, ~${fmtEUR(unalloc)}/mo stays idle. Try dragging the "Extra ETF Sparplan" slider above to see the compounding effect.` });
+      }
+
+      const metalPct = m.netWorth > 0 ? (m.solitTotal / m.netWorth) * 100 : 0;
+      tips.push({
+        tone: metalPct > 20 ? 'warning' : 'success',
+        title: `Solit Precious Metals Hedge (${metalPct.toFixed(1)}%)`,
+        body: metalPct > 20
+          ? 'Precious metals exceed 20% of wealth. Consider directing new inflows into productive FFB ETFs.'
+          : 'Well-sized inflation hedge (physical gold held >1 year is capital-gains tax-free in Germany).'
+      });
+
+      const totalRet = m.drvReal + m.metallMonthlyReal + m.privateMonthlyReal;
+      const gap = totalRet - (state.retireTargetMonthly || 0);
+      tips.push({
+        tone: gap >= 0 ? 'success' : 'error',
+        title: gap >= 0 ? 'Retirement Target Funded' : 'Close Your Rentenlücke',
+        body: gap >= 0
+          ? `Projected real retirement income (${fmtEUR(totalRet)}/mo) beats your target by ${fmtEUR(gap)}/mo.`
+          : `Projected income is ${fmtEUR(Math.abs(gap))}/mo short. Boosting ETF Sparplan by ~${fmtEUR(Math.abs(gap) * 0.4)}/mo helps close the gap.`
+      });
+
+      const cMap = { success: 'var(--success)', warning: 'var(--warning)', error: 'var(--error)', primary: 'var(--primary)' };
+      document.getElementById('strategyList').innerHTML = tips.map(t => `
+        <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 border-l-4" style="border-left-color:${cMap[t.tone]}">
+          <div class="font-semibold text-[var(--foreground)]">${t.title}</div>
+          <p class="text-[var(--muted-foreground)] mt-0.5 leading-relaxed">${t.body}</p>
+        </div>`).join('');
+    }
+
+    // =========================================================
+    // ADVISOR PDF VAULT (INDEXEDDB) & CHECKLIST
+    // =========================================================
+    const PDF_DB_NAME = 'VaultDE_PDFs_v1';
+    const PDF_STORE = 'pdfs';
+    let currentPreviewUrl = null;
+
+    function openPdfDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(PDF_DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(PDF_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function savePdfBlob(id, blob) {
+      try {
+        const db = await openPdfDb();
+        await new Promise((res, rej) => { const tx = db.transaction(PDF_STORE, 'readwrite'); tx.objectStore(PDF_STORE).put(blob, id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+      } catch (e) {}
+    }
+    async function getPdfBlob(id) {
+      try {
+        const db = await openPdfDb();
+        return await new Promise((res, rej) => { const tx = db.transaction(PDF_STORE, 'readonly'); const r = tx.objectStore(PDF_STORE).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+      } catch (e) { return null; }
+    }
+    async function deletePdfBlob(id) {
+      try {
+        const db = await openPdfDb();
+        await new Promise((res, rej) => { const tx = db.transaction(PDF_STORE, 'readwrite'); tx.objectStore(PDF_STORE).delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+      } catch (e) {}
+    }
+
+    async function handlePdfUpload(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      if (!state.advisorDocs) state.advisorDocs = [];
+      for (const file of files) {
+        const id = 'pdf-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+        await savePdfBlob(id, file);
+        const kb = file.size / 1024;
+        state.advisorDocs.unshift({
+          id,
+          title: file.name.replace(/\.pdf$/i, ''),
+          advisor: 'Daniel Bossenz',
+          date: new Date().toISOString().slice(0, 10),
+          category: 'Quarterly Update',
+          hasPdf: true,
+          fileSize: kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : Math.round(kb) + ' KB',
+          summary: 'Stored 100% locally in IndexedDB. Click Open PDF or write your takeaways here.',
+          status: 'Action Needed'
+        });
+      }
+      event.target.value = '';
+      persistState();
+      renderAll();
+      showToast(`📄 Stored ${files.length} PDF(s) locally`);
+    }
+
+    function addManualAdvisorNote() {
+      const title = document.getElementById('advNoteTitle').value.trim();
+      const cat = document.getElementById('advNoteCat').value;
+      const summary = document.getElementById('advNoteSummary').value.trim();
+      if (!title) return;
+      if (!state.advisorDocs) state.advisorDocs = [];
+      state.advisorDocs.unshift({
+        id: 'note-' + Date.now(), title, advisor: 'Daniel Bossenz',
+        date: new Date().toISOString().slice(0, 10), category: cat,
+        hasPdf: false, fileSize: '', summary: summary || 'No notes added yet.', status: 'Reviewed'
+      });
+      document.getElementById('advNoteTitle').value = '';
+      document.getElementById('advNoteSummary').value = '';
+      persistState(); renderAll(); showToast('✓ Briefing saved locally');
+    }
+
+    async function openPdfPreview(id, title) {
+      const blob = await getPdfBlob(id);
+      if (!blob) { showToast('PDF not found in this browser IndexedDB', 'error'); return; }
+      if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+      currentPreviewUrl = URL.createObjectURL(blob);
+      document.getElementById('pdfPreviewTitle').textContent = title + '.pdf';
+      document.getElementById('pdfPreviewFrame').src = currentPreviewUrl;
+      const dl = document.getElementById('pdfDownloadLink');
+      dl.href = currentPreviewUrl; dl.download = title + '.pdf';
+      document.getElementById('pdfPreviewModal').classList.remove('hidden');
+    }
+    function closePdfPreview() {
+      document.getElementById('pdfPreviewModal').classList.add('hidden');
+      document.getElementById('pdfPreviewFrame').src = '';
+      if (currentPreviewUrl) { URL.revokeObjectURL(currentPreviewUrl); currentPreviewUrl = null; }
+    }
+
+    function updateAdvisorDoc(id, field, val) {
+      const d = (state.advisorDocs || []).find(x => x.id === id);
+      if (!d) return;
+      d[field] = val; persistState();
+    }
+    function toggleAdvisorStatus(id) {
+      const d = (state.advisorDocs || []).find(x => x.id === id);
+      if (!d) return;
+      d.status = d.status === 'Reviewed' ? 'Action Needed' : 'Reviewed';
+      persistState(); renderAll();
+    }
+    async function deleteAdvisorDoc(id) {
+      state.advisorDocs = (state.advisorDocs || []).filter(x => x.id !== id);
+      await deletePdfBlob(id);
+      persistState(); renderAll();
+      showToast('Deleted briefing', 'warning');
+    }
+
+    function addAdvisorAction() {
+      const inp = document.getElementById('newActionInput');
+      const txt = inp.value.trim();
+      if (!txt) return;
+      if (!state.advisorActions) state.advisorActions = [];
+      state.advisorActions.unshift({ id: 'act-' + Date.now(), text: txt, done: false });
+      inp.value = '';
+      persistState(); renderAll();
+    }
+    function toggleAdvisorAction(id) {
+      const a = (state.advisorActions || []).find(x => x.id === id);
+      if (!a) return;
+      a.done = !a.done; persistState(); renderAll();
+    }
+    function deleteAdvisorAction(id) {
+      state.advisorActions = (state.advisorActions || []).filter(x => x.id !== id);
+      persistState(); renderAll();
+    }
+
+    function renderAdvisorActions() {
+      const list = document.getElementById('advisorActionsList');
+      const acts = state.advisorActions || [];
+      const done = acts.filter(a => a.done).length;
+      document.getElementById('actionProgressBadge').textContent = `${done}/${acts.length} done`;
+      if (!acts.length) {
+        list.innerHTML = `<div class="text-[var(--muted-foreground)] py-2">No open advisor action items.</div>`;
+        return;
+      }
+      list.innerHTML = acts.map(a => `
+        <div class="flex items-center justify-between gap-2 rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2">
+          <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+            <input type="checkbox" ${a.done ? 'checked' : ''} onchange="toggleAdvisorAction('${a.id}')" class="accent-[var(--primary)]" />
+            <span class="truncate ${a.done ? 'line-through text-[var(--muted-foreground)]' : ''}">${esc(a.text)}</span>
+          </label>
+          <button onclick="deleteAdvisorAction('${a.id}')" class="text-[var(--muted-foreground)] hover:text-[var(--error)]">✕</button>
+        </div>`).join('');
+    }
+
+    function renderAdvisorDocs() {
+      const container = document.getElementById('advisorDocsList');
+      if (!container) return;
+      const all = state.advisorDocs || [];
+      const pdfCount = all.filter(d => d.hasPdf).length;
+      document.getElementById('pdfStorageBadge').textContent = `${pdfCount} PDF${pdfCount === 1 ? '' : 's'} local`;
+
+      const q = (document.getElementById('advSearchInput')?.value || '').toLowerCase();
+      const cat = document.getElementById('advFilterCat')?.value || 'ALL';
+      const docs = all.filter(d => (cat === 'ALL' || d.category === cat) && (!q || (d.title + ' ' + d.summary + ' ' + d.category + ' ' + d.date).toLowerCase().includes(q)));
+
+      if (!docs.length) {
+        container.innerHTML = `<div class="text-xs text-[var(--muted-foreground)] text-center py-8 border border-dashed border-[var(--border)] rounded-xl">No matching briefings or PDFs.</div>`;
+        return;
+      }
+      container.innerHTML = docs.map(d => {
+        const isAction = d.status === 'Action Needed';
+        const safeTitle = esc(d.title).replace(/'/g, "\\'");
+        return `<div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2 text-xs">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="space-y-0.5 flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-semibold">${d.hasPdf ? '📄 ' : '📝 '}${esc(d.title)}</span>
+                <span class="px-2 py-0.5 rounded-full bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--muted-foreground)]">${esc(d.category)}</span>
+                ${d.fileSize ? `<span class="font-mono text-[var(--muted-foreground)]">${esc(d.fileSize)}</span>` : ''}
+              </div>
+              <div class="text-[var(--muted-foreground)]">${esc(d.advisor)} · ${esc(d.date)}</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              ${d.hasPdf ? `<button onclick="openPdfPreview('${d.id}', '${safeTitle}')" class="px-2.5 py-1 rounded-lg bg-[var(--primary)]/15 text-[var(--primary)] font-semibold hover:bg-[var(--primary)]/25">Open PDF</button>` : ''}
+              <button onclick="toggleAdvisorStatus('${d.id}')" class="px-2.5 py-1 rounded-lg border ${isAction ? 'text-[var(--warning)] border-[var(--warning)]/40' : 'text-[var(--success)] border-[var(--success)]/40'}">${esc(d.status)}</button>
+              <button onclick="deleteAdvisorDoc('${d.id}')" class="px-1.5 py-1 text-[var(--muted-foreground)] hover:text-[var(--error)]">✕</button>
+            </div>
+          </div>
+          <textarea rows="2" onchange="updateAdvisorDoc('${d.id}', 'summary', this.value)"
+            class="w-full rounded-lg bg-[var(--card)] border border-[var(--border)] px-2.5 py-1.5 text-xs text-[var(--muted-foreground)] focus:text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]">${esc(d.summary || '')}</textarea>
+        </div>`;
+      }).join('');
+    }
+
+    // =========================================================
+    // GEMINI PRIVATE GEM BRIDGE & QUARTERLY CHECK-IN
+    // =========================================================
+    const GEMINI_EXTRACTION_PROMPT = `Extract ONLY the financial numbers from the attached PDFs (DRV Renteninformation, MetallRente, FFB Depot, Solit, Tagesgeld/Festgeld, Daniel Bossenz Quarterly PDF).
+STRICT PRIVACY RULE: Strip ALL personal identifiers (name, address, IBAN, contract/depot numbers, Steuer-ID).
+Convert German numbers (48.500,00 €) to standard JSON numbers (48500). Omit missing fields.
+Return ONLY a valid JSON block:
+{
+  "grossSalary": 82000,
+  "taxClass": "I",
+  "age": 38,
+  "monthlySpend": 2450,
+  "drvCurrentMonthly": 980,
+  "drvProjectedMonthly": 2350,
+  "metallBalance": 24000,
+  "metallMonthly": 320,
+  "etfs": [
+    { "name": "Vanguard FTSE All-World", "isin": "IE00BK5BQT80", "value": 48500, "monthlyPlan": 800, "expReturn": 7.0 }
+  ],
+  "solitGoldGrams": 120,
+  "solitGoldPlan": 150,
+  "solitSilverGrams": 1500,
+  "solitSilverPlan": 50,
+  "tagesgeld": 15000,
+  "tagesgeldRate": 2.75,
+  "festgeld": 20000,
+  "festgeldRate": 3.1,
+  "advisorSummary": "2-3 sentence summary of Daniel Bossenz PDF takeaways & actions"
+}`;
+
+    function openGeminiSetupModal() {
+      document.getElementById('geminiPromptText').textContent = GEMINI_EXTRACTION_PROMPT;
+      document.getElementById('geminiJsonInput').value = '';
+      document.getElementById('geminiImportMsg').classList.add('hidden');
+      document.getElementById('geminiSetupModal').classList.remove('hidden');
+    }
+    function closeGeminiSetupModal() { document.getElementById('geminiSetupModal').classList.add('hidden'); }
+    async function copyGeminiPrompt() {
+      try {
+        await navigator.clipboard.writeText(GEMINI_EXTRACTION_PROMPT);
+        showToast('📋 Gem prompt copied to clipboard');
+      } catch (e) {}
+    }
+
+    function applyGeminiJson() {
+      const raw = document.getElementById('geminiJsonInput').value.trim();
+      const msg = document.getElementById('geminiImportMsg');
+      try {
+        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const parsed = JSON.parse(cleaned);
+        const numKeys = [
+          'grossSalary', 'age', 'retireAge', 'monthlySpend',
+          'drvCurrentMonthly', 'drvProjectedMonthly', 'metallBalance', 'metallMonthly',
+          'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
+          'tagesgeld', 'tagesgeldRate', 'festgeld', 'festgeldRate'
+        ];
+        numKeys.forEach(k => { if (typeof parsed[k] === 'number' && !isNaN(parsed[k])) state[k] = parsed[k]; });
+        if (['I','II','III','IV','V','VI'].includes(parsed.taxClass)) state.taxClass = parsed.taxClass;
+        if (Array.isArray(parsed.etfs) && parsed.etfs.length) {
+          state.etfs = parsed.etfs.map(e => ({
+            name: e.name || 'ETF', isin: e.isin || '', value: Number(e.value) || 0,
+            monthlyPlan: Number(e.monthlyPlan) || 0, expReturn: Number(e.expReturn) || 7.0
+          }));
+        }
+        if (parsed.advisorSummary) {
+          if (!state.advisorDocs) state.advisorDocs = [];
+          state.advisorDocs.unshift({
+            id: 'gemini-' + Date.now(), title: `Daniel Bossenz — ${currentQuarterLabel()} Gem Extract`,
+            advisor: 'Daniel Bossenz', date: new Date().toISOString().slice(0, 10),
+            category: 'Quarterly Update', hasPdf: false, fileSize: '',
+            summary: parsed.advisorSummary, status: 'Action Needed'
+          });
+        }
+        syncInputsFromState();
+        logSnapshotNow(true);
+        closeGeminiSetupModal();
+        showToast('✨ Gemini JSON merged & quarter logged!');
+      } catch (err) {
+        msg.textContent = 'Invalid JSON — make sure you pasted the full { ... } block.';
+        msg.className = 'text-xs text-[var(--error)]';
+        msg.classList.remove('hidden');
+      }
+    }
+
+    function openQuarterlyModal() {
+      document.getElementById('qTagesgeld').value = state.tagesgeld || 0;
+      document.getElementById('qFestgeld').value = state.festgeld || 0;
+      document.getElementById('qMetallBalance').value = state.metallBalance || 0;
+      document.getElementById('qMonthlySpend').value = state.monthlySpend || 0;
+      document.getElementById('qSolitGold').value = state.solitGoldGrams || 0;
+      document.getElementById('qSolitSilver').value = state.solitSilverGrams || 0;
+      document.getElementById('qBossenzNote').value = '';
+      document.getElementById('qEtfInputs').innerHTML = (state.etfs || []).map((e, i) => `
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[var(--muted-foreground)] truncate flex-1">${esc(e.name)}</span>
+          <input id="qEtf_${i}" type="number" step="100" value="${e.value}"
+            class="w-28 text-right rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 font-mono" />
+        </div>`).join('');
+      document.getElementById('quarterlyModal').classList.remove('hidden');
+    }
+    function closeQuarterlyModal() { document.getElementById('quarterlyModal').classList.add('hidden'); }
+
+    function saveQuarterlyUpdate() {
+      state.tagesgeld = +document.getElementById('qTagesgeld').value || 0;
+      state.festgeld = +document.getElementById('qFestgeld').value || 0;
+      state.metallBalance = +document.getElementById('qMetallBalance').value || 0;
+      state.monthlySpend = +document.getElementById('qMonthlySpend').value || 0;
+      state.solitGoldGrams = +document.getElementById('qSolitGold').value || 0;
+      state.solitSilverGrams = +document.getElementById('qSolitSilver').value || 0;
+      (state.etfs || []).forEach((e, i) => {
+        const el = document.getElementById('qEtf_' + i);
+        if (el) e.value = +el.value || 0;
+      });
+      const note = document.getElementById('qBossenzNote').value.trim();
+      if (note) {
+        if (!state.advisorDocs) state.advisorDocs = [];
+        state.advisorDocs.unshift({
+          id: 'qnote-' + Date.now(), title: `${currentQuarterLabel()} Quarterly Check-In Note`,
+          advisor: 'Daniel Bossenz', date: new Date().toISOString().slice(0, 10),
+          category: 'Quarterly Update', hasPdf: false, fileSize: '', summary: note, status: 'Reviewed'
+        });
+      }
+      syncInputsFromState();
+      logSnapshotNow(true);
+      closeQuarterlyModal();
+      showToast(`✓ ${currentQuarterLabel()} updated & logged!`);
+    }
+
+    function syncInputsFromState() {
+      const map = {
+        inGrossSalary: state.grossSalary, inTaxClass: state.taxClass, inChurchTax: state.churchTax,
+        inHealthType: state.healthType || 'GKV', inPkvMonthly: state.pkvMonthly || 420,
+        inAge: state.age, inRetireAge: state.retireAge, inMonthlySpend: state.monthlySpend,
+        inDrvCurrent: state.drvCurrentMonthly, inDrvProjected: state.drvProjectedMonthly, inDrvGrowth: state.drvGrowthRate,
+        inMetallBalance: state.metallBalance, inMetallMonthly: state.metallMonthly, inMetallReturn: state.metallReturn,
+        inRetireTarget: state.retireTargetMonthly, inInflation: state.inflation,
+        inSolitGoldG: state.solitGoldGrams, inSolitGoldPlan: state.solitGoldPlan,
+        inSolitSilverG: state.solitSilverGrams, inSolitSilverPlan: state.solitSilverPlan,
+        inTagesgeld: state.tagesgeld, inTagesRate: state.tagesgeldRate,
+        inFestgeld: state.festgeld, inFestRate: state.festgeldRate,
+        mktEurUsd: state.market.eurUsd, mktGoldG: state.market.goldEurPerG, mktSilverG: state.market.silverEurPerG,
+        wiRetireAge: state.retireAge || 67
+      };
+      Object.entries(map).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
+      const ch = document.getElementById('inHasChildren');
+      if (ch) ch.checked = !!state.hasChildren;
+    }
+
+    // =========================================================
+    // BOOTSTRAP & INTERACTIVE LISTENERS
+    // =========================================================
+    (function init() {
+      // Drag & Drop PDFs
+      const dz = document.getElementById('pdfDropZone');
+      if (dz) {
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('border-[var(--primary)]'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('border-[var(--primary)]'));
+        dz.addEventListener('drop', (e) => {
+          e.preventDefault(); dz.classList.remove('border-[var(--primary)]');
+          if (e.dataTransfer.files?.length) handlePdfUpload({ target: { files: e.dataTransfer.files, value: '' } });
+        });
+      }
+
+      // Interactive hover scrubbing on Projection Chart
+      const projSvg = document.getElementById('projectionChart');
+      if (projSvg) {
+        const handleMove = (clientX) => {
+          if (!lastProjectionData) return;
+          const rect = projSvg.getBoundingClientRect();
+          const relX = ((clientX - rect.left) / rect.width) * 760;
+          const n = lastProjectionData.base.length - 1 || 1;
+          const frac = Math.max(0, Math.min(1, (relX - 66) / (760 - 66 - 20)));
+          const idx = Math.round(frac * n);
+          const c = lastProjectionData.cons[idx], b = lastProjectionData.base[idx], o = lastProjectionData.opt[idx];
+          renderProjectionChart(lastProjectionData.cons, lastProjectionData.base, lastProjectionData.opt, idx);
+          document.getElementById('chartHoverBar').firstElementChild.innerHTML =
+            `<span class="font-semibold text-[var(--foreground)]">Age ${b.age} (${b.year}):</span> ` +
+            `<span class="sensitive font-mono">Cons ${fmtEUR(c.total)} · <b class="text-[var(--primary)]">Base ${fmtEUR(b.total)}</b> · Opt <b class="text-[var(--success)]">${fmtEUR(o.total)}</b></span>`;
+        };
+        projSvg.addEventListener('mousemove', (e) => handleMove(e.clientX));
+        projSvg.addEventListener('touchmove', (e) => { if (e.touches[0]) handleMove(e.touches[0].clientX); }, { passive: true });
+      }
+
+      // Load local or encrypted state
+      try {
+        const enc = localStorage.getItem(ENCRYPTED_KEY);
+        if (enc) {
+          openUnlockModal();
+          syncInputsFromState();
+          renderAll();
+          return;
+        }
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) state = { ...structuredClone(DEFAULT_STATE), ...JSON.parse(saved) };
+      } catch (e) {}
+      syncInputsFromState();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
