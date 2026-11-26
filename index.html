@@ -73,7 +73,7 @@
               Last Q: —
             </span>
           </div>
-          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">German Wealth, DRV/MetallRente, FFB/Solit &amp; Advisor Cockpit</p>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">German Wealth, DRV/MetallRente/Continentale, FFB/Solit &amp; Advisor Cockpit</p>
         </div>
       </div>
 
@@ -113,7 +113,7 @@
         1. Status &amp; Cashflow
       </button>
       <button id="tabBtn-retirement" onclick="switchTab('retirement')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive">
-        2. Retirement (DRV &amp; MetallRente)
+        2. Retirement (DRV, MetallRente &amp; Continentale)
       </button>
       <button id="tabBtn-investments" onclick="switchTab('investments')" class="tab-btn pb-2.5 text-sm whitespace-nowrap tab-inactive">
         3. Investments (FFB, Solit &amp; Cash)
@@ -290,7 +290,7 @@
                 <div id="tab1InvestMonthly" class="sensitive font-mono font-bold text-sm text-[var(--primary)] mt-0.5">€0/mo</div>
               </button>
               <button onclick="switchTab('retirement')" class="text-left rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)] px-2.5 py-1.5 transition">
-                <div class="text-[var(--muted-foreground)]">MetallRente (bAV) ↗</div>
+                <div class="text-[var(--muted-foreground)]">Pensions (bAV+Conti) ↗</div>
                 <div id="tab1MetallMonthly" class="sensitive font-mono font-bold text-sm mt-0.5">€0/mo</div>
               </button>
             </div>
@@ -328,10 +328,10 @@
     </section>
 
     <!-- ========================================================= -->
-    <!-- TAB 2: RETIREMENT (DRV & METALLRENTE + DRAWDOWN)          -->
+    <!-- TAB 2: RETIREMENT (DRV, METALLRENTE, CONTINENTALE)        -->
     <!-- ========================================================= -->
     <section id="tab-retirement" class="hidden space-y-4">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- LAYER 1: DRV -->
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
           <div class="flex items-center justify-between">
@@ -356,7 +356,7 @@
             </div>
           </div>
           <div class="pt-2 border-t border-[var(--border)] flex justify-between text-xs">
-            <span class="text-[var(--muted-foreground)]">Est. Net DRV (Today's €, after KVdR/tax)</span>
+            <span class="text-[var(--muted-foreground)]">Est. Net DRV (Today's €)</span>
             <span id="outDrvReal" class="sensitive font-mono font-bold">€0/mo</span>
           </div>
         </div>
@@ -386,12 +386,65 @@
           </div>
           <div class="pt-2 border-t border-[var(--border)] space-y-1 text-xs">
             <div class="flex justify-between">
-              <span class="text-[var(--muted-foreground)]">Nominal Capital at Retirement</span>
+              <span class="text-[var(--muted-foreground)]">Nominal Capital</span>
               <span id="outMetallCapital" class="sensitive font-mono font-semibold">€0</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-[var(--muted-foreground)]">Est. Net Monthly (Today's €, after bAV tax/KV)</span>
+              <span class="text-[var(--muted-foreground)]">Est. Net Monthly (Real €)</span>
               <span id="outMetallReal" class="sensitive font-mono font-bold">€0/mo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTINENTALE ZUSATZRENTENVERSICHERUNG -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold">Continentale Zusatzrente</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--chart-5)]/15 text-[var(--chart-5)] font-medium">Rente+</span>
+          </div>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Policy Type (German Tax Rule)</label>
+              <select id="inContiType" onchange="updateField('continentaleType', this.value)"
+                class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-1.5 text-xs">
+                <option value="private">Private Rente (Schicht 3 · Ertragsanteil ~94% net)</option>
+                <option value="basis">Basisrente / Rürup (Schicht 1 · ~82% net)</option>
+                <option value="riester">Riester / bAV (Schicht 2 · ~80% net)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1">Current Stand (€)</label>
+                <input id="inContiBalance" type="number" step="500" min="0" oninput="updateField('continentaleBalance', +this.value)"
+                  class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-sm font-mono tabular-nums" />
+              </div>
+              <div>
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1">Monthly (€/mo)</label>
+                <input id="inContiMonthly" type="number" step="25" min="0" oninput="updateField('continentaleMonthly', +this.value)"
+                  class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-sm font-mono tabular-nums" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1">Exp. Return (%/yr)</label>
+                <input id="inContiReturn" type="number" step="0.2" min="0" max="12" oninput="updateField('continentaleReturn', +this.value)"
+                  class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-sm font-mono tabular-nums" />
+              </div>
+              <div>
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1" title="Optional: Leave 0 to auto-calculate from balance + monthly contribution">Policy Est. €/mo (0=auto)</label>
+                <input id="inContiProjected" type="number" step="25" min="0" oninput="updateField('continentaleProjectedMonthly', +this.value)"
+                  class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-2.5 py-1.5 text-sm font-mono tabular-nums" />
+              </div>
+            </div>
+          </div>
+          <div class="pt-2 border-t border-[var(--border)] space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Nominal Capital</span>
+              <span id="outContiCapital" class="sensitive font-mono font-semibold">€0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Est. Net Monthly (Real €)</span>
+              <span id="outContiReal" class="sensitive font-mono font-bold text-[var(--chart-5)]">€0/mo</span>
             </div>
           </div>
         </div>
@@ -416,7 +469,7 @@
           </div>
           <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-1.5 text-xs">
             <div class="flex justify-between">
-              <span class="text-[var(--muted-foreground)]">DRV + MetallRente (Net Real)</span>
+              <span class="text-[var(--muted-foreground)]">DRV + MetallRente + Conti</span>
               <span id="retBaseIncome" class="sensitive font-mono font-semibold">€0/mo</span>
             </div>
             <div class="flex justify-between">
@@ -434,14 +487,14 @@
       <!-- INCOME STACK + DRAWDOWN TO AGE 95 -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div class="lg:col-span-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
-          <h3 class="text-sm font-bold">3-Layer Retirement Income Mix</h3>
+          <h3 class="text-sm font-bold">4-Pillar Retirement Income Mix</h3>
           <div id="retirementBarContainer" class="space-y-3"></div>
         </div>
         <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 class="text-sm font-bold">Post-Retirement Drawdown Simulator (Age <span id="ddStartAge">67</span> → 95)</h3>
-              <p class="text-xs text-[var(--muted-foreground)]">Tests if your private wealth sustains your target income (after DRV &amp; MetallRente) until age 95.</p>
+              <p class="text-xs text-[var(--muted-foreground)]">Tests if your private wealth sustains your target income (after DRV, MetallRente &amp; Continentale) until age 95.</p>
             </div>
             <span id="drawdownVerdict" class="text-xs font-semibold px-2.5 py-1 rounded-full"></span>
           </div>
@@ -716,7 +769,7 @@
                   <th class="py-1.5 pr-2">Horizon</th>
                   <th class="py-1.5 px-2 text-right">Cash Savings</th>
                   <th class="py-1.5 px-2 text-right">FFB + Solit</th>
-                  <th class="py-1.5 px-2 text-right">MetallRente</th>
+                  <th class="py-1.5 px-2 text-right">bAV + Conti</th>
                   <th class="py-1.5 px-2 text-right">Contributed</th>
                   <th class="py-1.5 px-2 text-right">Growth</th>
                   <th class="py-1.5 pl-2 text-right">Projected Total</th>
@@ -936,6 +989,10 @@
           <input id="qMetallBalance" type="number" step="100" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
         </div>
         <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Continentale Stand (€)</label>
+          <input id="qContiBalance" type="number" step="100" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
           <label class="block text-[var(--muted-foreground)] mb-1">Avg. Monthly Spend (€)</label>
           <input id="qMonthlySpend" type="number" step="50" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
         </div>
@@ -1071,6 +1128,11 @@
       metallBalance: 24000,
       metallMonthly: 320,
       metallReturn: 4.5,
+      continentaleType: 'private',
+      continentaleBalance: 14500,
+      continentaleMonthly: 200,
+      continentaleReturn: 5.0,
+      continentaleProjectedMonthly: 0,
       retireTargetMonthly: 3200,
       inflation: 2.0,
       // Investments
@@ -1557,8 +1619,10 @@
       const sparerCap = (state.taxClass === 'III' || state.taxClass === 'IV') ? 2000 : 1000;
 
       const metallTotal = state.metallBalance || 0;
-      const netWorth = cashTotal + etfTotal + solitTotal + metallTotal;
-      const totalMonthlySaveInvest = cashPlan + etfPlan + solitPlan + (state.metallMonthly || 0);
+      const contiTotal = state.continentaleBalance || 0;
+      const contiMonthly = state.continentaleMonthly || 0;
+      const netWorth = cashTotal + etfTotal + solitTotal + metallTotal + contiTotal;
+      const totalMonthlySaveInvest = cashPlan + etfPlan + solitPlan + (state.metallMonthly || 0) + contiMonthly;
       const monthlySurplus = pay.netMonthly - (state.monthlySpend || 0);
       const sparquote = pay.netMonthly > 0 ? (monthlySurplus / pay.netMonthly) * 100 : 0;
       const runwayMonths = state.monthlySpend > 0 ? cashTotal / state.monthlySpend : 0;
@@ -1580,6 +1644,16 @@
       const metallFutureReal = metallFutureNom / inflFactor;
       const metallMonthlyReal = ((metallFutureReal * 0.042) / 12) * 0.78;
 
+      // Continentale Zusatzrentenversicherung
+      const rC = (state.continentaleReturn || 5.0) / 100 / 12;
+      const contiFutureNom = contiTotal * Math.pow(1 + rC, nM) + contiMonthly * ((Math.pow(1 + rC, nM) - 1) / (rC || 1));
+      const contiFutureReal = contiFutureNom / inflFactor;
+      const contiNetFactor = state.continentaleType === 'basis' ? 0.82 : state.continentaleType === 'riester' ? 0.80 : 0.94;
+      const contiGrossMonthlyReal = (state.continentaleProjectedMonthly || 0) > 0
+        ? (state.continentaleProjectedMonthly / inflFactor)
+        : (contiFutureReal * 0.040) / 12;
+      const contiMonthlyReal = contiGrossMonthlyReal * contiNetFactor;
+
       // DRV net real (~15% KVdR + income tax approx)
       const drvNom = (state.drvProjectedMonthly || 0) * Math.pow(1 + (state.drvGrowthRate || 1.5) / 100, yearsToRetire);
       const drvReal = (drvNom / inflFactor) * 0.85;
@@ -1588,7 +1662,7 @@
         const pts = [];
         let etf = etfTotal, solit = solitTotal;
         let tages = state.tagesgeld || 0, fest = state.festgeld || 0;
-        let metall = metallTotal;
+        let metall = metallTotal, conti = contiTotal;
         let contributed = netWorth;
 
         const rEtf = Math.max(0.01, (etfWeightedReturn + deltaReturn) / 100);
@@ -1596,16 +1670,18 @@
         const rTages = Math.max(0, (state.tagesgeldRate || 0) / 100);
         const rFest = Math.max(0, (state.festgeldRate || 0) / 100);
         const rMet = Math.max(0.01, ((state.metallReturn || 4.5) + deltaReturn * 0.5) / 100);
+        const rCon = Math.max(0.01, ((state.continentaleReturn || 5.0) + deltaReturn * 0.5) / 100);
         const useReal = document.getElementById('toggleRealTerms')?.checked ?? true;
         const baseYear = new Date().getFullYear();
 
-        const annualAdd = (etfPlan + extraEtfMo + solitPlan + cashPlan + (state.metallMonthly || 0)) * 12;
+        const annualAdd = (etfPlan + extraEtfMo + solitPlan + cashPlan + (state.metallMonthly || 0) + contiMonthly) * 12;
 
         for (let y = 0; y <= yrs; y++) {
           const defl = useReal ? Math.pow(1 + infl, y) : 1;
           const cashSum = tages + fest;
           const invSum = etf + solit;
-          const tot = (invSum + cashSum + metall) / defl;
+          const pensionSum = metall + conti;
+          const tot = (invSum + cashSum + pensionSum) / defl;
           const contribDefl = contributed / defl;
           pts.push({
             yearOffset: y,
@@ -1613,7 +1689,7 @@
             year: baseYear + y,
             cash: cashSum / defl,
             invested: invSum / defl,
-            metall: metall / defl,
+            metall: pensionSum / defl,
             contributed: contribDefl,
             growth: Math.max(0, tot - contribDefl),
             total: tot,
@@ -1624,6 +1700,7 @@
           tages = tages * (1 + rTages) + (state.tagesgeldPlan || 0) * 12;
           fest = fest * (1 + rFest) + (state.festgeldPlan || 0) * 12;
           metall = metall * (1 + rMet) + (state.metallMonthly || 0) * 12;
+          conti = conti * (1 + rCon) + contiMonthly * 12;
           contributed += annualAdd;
         }
         return pts;
@@ -1638,12 +1715,12 @@
       const privateMonthlyReal = (privateAtRetireReal * 0.035) / 12;
 
       const simPrivateAtRetire = baseSeries[baseSeries.length - 1].privateOnly;
-      const simMonthlyIncome = drvReal + metallMonthlyReal + (simPrivateAtRetire * wiSwr) / 12;
+      const simMonthlyIncome = drvReal + metallMonthlyReal + contiMonthlyReal + (simPrivateAtRetire * wiSwr) / 12;
 
       // Drawdown simulator (Real €, Age retireAge -> 95)
       const drawdown = [];
       let bal = privateAtRetireReal;
-      const neededFromPrivateMonthly = Math.max(0, (state.retireTargetMonthly || 3000) - (drvReal + metallMonthlyReal));
+      const neededFromPrivateMonthly = Math.max(0, (state.retireTargetMonthly || 3000) - (drvReal + metallMonthlyReal + contiMonthlyReal));
       const realPostRetireReturn = Math.max(0.005, (etfWeightedReturn / 100 - infl) * 0.55); // de-risked balanced portfolio
       const startAge = state.retireAge || 67;
       for (let a = startAge; a <= 95; a++) {
@@ -1655,7 +1732,8 @@
         pay, etfTotal, etfPlan, etfWeightedReturn,
         solitGoldVal, solitSilverVal, solitTotal, solitPlan,
         cashTotal, cashPlan, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
-        metallTotal, netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
+        metallTotal, contiTotal, contiMonthly, contiFutureNom, contiMonthlyReal,
+        netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
         yearsToRetire, metallFutureNom, metallMonthlyReal, drvReal,
         privateMonthlyReal, baseSeries, consSeries, optSeries,
         wiExtraEtf, wiRetireAge, wiSwr, simMonthlyIncome, drawdown
@@ -1728,19 +1806,20 @@
         <div style="width:${pSpend.toFixed(1)}%; background:var(--muted-foreground)" title="Spending"></div>
         <div style="width:${pSave.toFixed(1)}%; background:var(--success)" title="Surplus"></div>`;
 
-      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan);
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan + m.contiMonthly);
       document.getElementById('cashflowUnallocated').textContent =
         unalloc >= 0 ? `Unallocated cash after Save+Invest: +${fmtEUR(unalloc)}/mo` : `Plans exceed net surplus by ${fmtEUR(Math.abs(unalloc))}/mo`;
 
       const saveInvestPct = m.pay.netMonthly > 0 ? ((m.totalMonthlySaveInvest / m.pay.netMonthly) * 100).toFixed(0) : 0;
       document.getElementById('totalSaveInvestBadge').textContent = `${fmtEUR(m.totalMonthlySaveInvest)}/mo (${saveInvestPct}% of Net)`;
       document.getElementById('tab1InvestMonthly').textContent = `${fmtEUR(m.etfPlan + m.solitPlan)}/mo`;
-      document.getElementById('tab1MetallMonthly').textContent = `${fmtEUR(state.metallMonthly || 0)}/mo`;
+      document.getElementById('tab1MetallMonthly').textContent = `${fmtEUR((state.metallMonthly || 0) + m.contiMonthly)}/mo`;
 
       renderDonut([
         { label: 'FFB ETFs', value: m.etfTotal, color: 'var(--chart-1)' },
         { label: 'Tages- & Festgeld', value: m.cashTotal, color: 'var(--chart-2)' },
         { label: 'MetallRente (bAV)', value: m.metallTotal, color: 'var(--chart-3)' },
+        { label: 'Continentale Rente', value: m.contiTotal, color: 'var(--chart-5)' },
         { label: 'Solit Metals', value: m.solitTotal, color: 'var(--chart-4)' }
       ]);
       renderHistorySparkline();
@@ -1749,7 +1828,9 @@
       document.getElementById('outDrvReal').textContent = `${fmtEUR(m.drvReal)}/mo`;
       document.getElementById('outMetallCapital').textContent = fmtEUR(m.metallFutureNom);
       document.getElementById('outMetallReal').textContent = `${fmtEUR(m.metallMonthlyReal)}/mo`;
-      const baseRet = m.drvReal + m.metallMonthlyReal;
+      document.getElementById('outContiCapital').textContent = fmtEUR(m.contiFutureNom);
+      document.getElementById('outContiReal').textContent = `${fmtEUR(m.contiMonthlyReal)}/mo`;
+      const baseRet = m.drvReal + m.metallMonthlyReal + m.contiMonthlyReal;
       const totalRet = baseRet + m.privateMonthlyReal;
       const gap = totalRet - (state.retireTargetMonthly || 0);
       document.getElementById('retBaseIncome').textContent = `${fmtEUR(baseRet)}/mo`;
@@ -1760,7 +1841,7 @@
       document.getElementById('retYearsLeft').textContent = `${m.yearsToRetire} yrs left`;
       document.getElementById('ddStartAge').textContent = state.retireAge || 67;
 
-      renderRetirementBars(m.drvReal, m.metallMonthlyReal, m.privateMonthlyReal, state.retireTargetMonthly || 3000);
+      renderRetirementBars(m.drvReal, m.metallMonthlyReal, m.contiMonthlyReal, m.privateMonthlyReal, state.retireTargetMonthly || 3000);
       renderDrawdownChart(m.drawdown);
 
       // TAB 3 INVESTMENTS & TAX SHIELD
@@ -1792,7 +1873,7 @@
 
       const simMonthlyFlow = m.totalMonthlySaveInvest + m.wiExtraEtf;
       document.getElementById('projMonthlyFlowSummary').textContent =
-        `Injecting ${fmtEUR(simMonthlyFlow)}/mo (${fmtEUR(m.cashPlan)} cash + ${fmtEUR(m.etfPlan + m.solitPlan + m.wiExtraEtf)} invest + ${fmtEUR(state.metallMonthly || 0)} bAV)`;
+        `Injecting ${fmtEUR(simMonthlyFlow)}/mo (${fmtEUR(m.cashPlan)} cash + ${fmtEUR(m.etfPlan + m.solitPlan + m.wiExtraEtf)} invest + ${fmtEUR((state.metallMonthly || 0) + m.contiMonthly)} bAV/Conti)`;
 
       lastProjectionData = { cons: m.consSeries, base: m.baseSeries, opt: m.optSeries };
       renderProjectionChart(m.consSeries, m.baseSeries, m.optSeries);
@@ -1861,13 +1942,15 @@
         `).join('')}`;
     }
 
-    function renderRetirementBars(drv, metall, priv, target) {
-      const maxVal = Math.max(target, drv + metall + priv, 1000);
+    function renderRetirementBars(drv, metall, conti, priv, target) {
+      const total = drv + metall + conti + priv;
+      const maxVal = Math.max(target, total, 1000);
       const pct = (v) => Math.min(100, (v / maxVal) * 100).toFixed(1);
       const rows = [
-        { label: 'Layer 1 · DRV (Net Real)', val: drv, color: 'var(--chart-1)' },
-        { label: 'Layer 2 · MetallRente (Net Real)', val: metall, color: 'var(--chart-3)' },
-        { label: 'Layer 3 · Private Portfolio (3.5% SWR)', val: priv, color: 'var(--chart-2)' }
+        { label: 'Pillar 1 · DRV (Net Real)', val: drv, color: 'var(--chart-1)' },
+        { label: 'Pillar 2 · MetallRente bAV (Net Real)', val: metall, color: 'var(--chart-3)' },
+        { label: 'Pillar 3 · Continentale Zusatzrente (Net Real)', val: conti, color: 'var(--chart-5)' },
+        { label: 'Pillar 4 · Private Portfolio (3.5% SWR)', val: priv, color: 'var(--chart-2)' }
       ];
       document.getElementById('retirementBarContainer').innerHTML = rows.map(r => `
         <div class="space-y-1 text-xs">
@@ -1881,7 +1964,7 @@
         </div>`).join('') + `
         <div class="pt-2 border-t border-[var(--border)] flex justify-between text-xs font-semibold">
           <span>Combined vs. Target (${fmtEUR(target)}/mo)</span>
-          <span class="sensitive font-mono text-[var(--primary)]">${Math.round(((drv + metall + priv) / (target || 1)) * 100)}% funded</span>
+          <span class="sensitive font-mono text-[var(--primary)]">${Math.round((total / (target || 1)) * 100)}% funded</span>
         </div>`;
     }
 
@@ -2038,9 +2121,9 @@
         tips.push({ tone: 'success', title: 'Optimal Emergency Buffer', body: `${m.runwayMonths.toFixed(1)} months of spending safely parked in Tagesgeld & Festgeld (+${fmtEUR(m.cashPlan)}/mo added).` });
       }
 
-      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan);
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan + m.contiMonthly);
       if (unalloc > 250) {
-        tips.push({ tone: 'primary', title: `Unallocated Monthly Surplus (+${fmtEUR(unalloc)}/mo)`, body: `After spending, cash savings (${fmtEUR(m.cashPlan)}/mo), and investments (${fmtEUR(m.etfPlan + m.solitPlan)}/mo), ~${fmtEUR(unalloc)}/mo stays idle. Drag the "Extra ETF Sparplan" slider above to see how much extra wealth it generates.` });
+        tips.push({ tone: 'primary', title: `Unallocated Monthly Surplus (+${fmtEUR(unalloc)}/mo)`, body: `After spending, cash savings (${fmtEUR(m.cashPlan)}/mo), Continentale (${fmtEUR(m.contiMonthly)}/mo), and investments (${fmtEUR(m.etfPlan + m.solitPlan)}/mo), ~${fmtEUR(unalloc)}/mo stays idle. Drag the "Extra ETF Sparplan" slider above to see how much extra wealth it generates.` });
       }
 
       const metalPct = m.netWorth > 0 ? (m.solitTotal / m.netWorth) * 100 : 0;
@@ -2052,7 +2135,7 @@
           : 'Well-sized inflation hedge (physical gold held >1 year is capital-gains tax-free in Germany).'
       });
 
-      const totalRet = m.drvReal + m.metallMonthlyReal + m.privateMonthlyReal;
+      const totalRet = m.drvReal + m.metallMonthlyReal + m.contiMonthlyReal + m.privateMonthlyReal;
       const gap = totalRet - (state.retireTargetMonthly || 0);
       tips.push({
         tone: gap >= 0 ? 'success' : 'error',
@@ -2262,7 +2345,7 @@
     // =========================================================
     // GEMINI PRIVATE GEM BRIDGE & QUARTERLY CHECK-IN
     // =========================================================
-    const GEMINI_EXTRACTION_PROMPT = `Extract ONLY the financial numbers from the attached PDFs (DRV Renteninformation, MetallRente, FFB Depot, Solit, Tagesgeld/Festgeld, Daniel Bossenz Quarterly PDF).
+    const GEMINI_EXTRACTION_PROMPT = `Extract ONLY the financial numbers from the attached PDFs (DRV Renteninformation, MetallRente, Continentale Zusatzrente, FFB Depot, Solit, Tagesgeld/Festgeld, Daniel Bossenz Quarterly PDF).
 STRICT PRIVACY RULE: Strip ALL personal identifiers (name, address, IBAN, contract/depot numbers, Steuer-ID).
 Convert German numbers (48.500,00 €) to standard JSON numbers (48500). Omit missing fields.
 Return ONLY a valid JSON block:
@@ -2275,6 +2358,10 @@ Return ONLY a valid JSON block:
   "drvProjectedMonthly": 2350,
   "metallBalance": 24000,
   "metallMonthly": 320,
+  "continentaleType": "private",
+  "continentaleBalance": 14500,
+  "continentaleMonthly": 200,
+  "continentaleProjectedMonthly": 0,
   "etfs": [
     { "name": "Vanguard FTSE All-World", "isin": "IE00BK5BQT80", "value": 48500, "monthlyPlan": 800, "expReturn": 7.0 }
   ],
@@ -2314,11 +2401,13 @@ Return ONLY a valid JSON block:
         const numKeys = [
           'grossSalary', 'age', 'retireAge', 'monthlySpend',
           'drvCurrentMonthly', 'drvProjectedMonthly', 'metallBalance', 'metallMonthly',
+          'continentaleBalance', 'continentaleMonthly', 'continentaleReturn', 'continentaleProjectedMonthly',
           'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
           'tagesgeld', 'tagesgeldRate', 'tagesgeldPlan', 'festgeld', 'festgeldRate', 'festgeldPlan'
         ];
         numKeys.forEach(k => { if (typeof parsed[k] === 'number' && !isNaN(parsed[k])) state[k] = parsed[k]; });
         if (['I','II','III','IV','V','VI'].includes(parsed.taxClass)) state.taxClass = parsed.taxClass;
+        if (['private','basis','riester'].includes(parsed.continentaleType)) state.continentaleType = parsed.continentaleType;
         if (Array.isArray(parsed.etfs) && parsed.etfs.length) {
           state.etfs = parsed.etfs.map(e => ({
             name: e.name || 'ETF', isin: e.isin || '', value: Number(e.value) || 0,
@@ -2349,6 +2438,7 @@ Return ONLY a valid JSON block:
       document.getElementById('qTagesgeld').value = state.tagesgeld || 0;
       document.getElementById('qFestgeld').value = state.festgeld || 0;
       document.getElementById('qMetallBalance').value = state.metallBalance || 0;
+      document.getElementById('qContiBalance').value = state.continentaleBalance || 0;
       document.getElementById('qMonthlySpend').value = state.monthlySpend || 0;
       document.getElementById('qSolitGold').value = state.solitGoldGrams || 0;
       document.getElementById('qSolitSilver').value = state.solitSilverGrams || 0;
@@ -2369,6 +2459,7 @@ Return ONLY a valid JSON block:
       state.tagesgeld = +document.getElementById('qTagesgeld').value || 0;
       state.festgeld = +document.getElementById('qFestgeld').value || 0;
       state.metallBalance = +document.getElementById('qMetallBalance').value || 0;
+      state.continentaleBalance = +document.getElementById('qContiBalance').value || 0;
       state.monthlySpend = +document.getElementById('qMonthlySpend').value || 0;
       state.solitGoldGrams = +document.getElementById('qSolitGold').value || 0;
       state.solitSilverGrams = +document.getElementById('qSolitSilver').value || 0;
@@ -2400,6 +2491,9 @@ Return ONLY a valid JSON block:
         inAge: state.age, inRetireAge: state.retireAge, inMonthlySpend: state.monthlySpend,
         inDrvCurrent: state.drvCurrentMonthly, inDrvProjected: state.drvProjectedMonthly, inDrvGrowth: state.drvGrowthRate,
         inMetallBalance: state.metallBalance, inMetallMonthly: state.metallMonthly, inMetallReturn: state.metallReturn,
+        inContiType: state.continentaleType || 'private', inContiBalance: state.continentaleBalance || 0,
+        inContiMonthly: state.continentaleMonthly || 0, inContiReturn: state.continentaleReturn ?? 5.0,
+        inContiProjected: state.continentaleProjectedMonthly || 0,
         inRetireTarget: state.retireTargetMonthly, inInflation: state.inflation,
         inSolitGoldG: state.solitGoldGrams, inSolitGoldPlan: state.solitGoldPlan,
         inSolitSilverG: state.solitSilverGrams, inSolitSilverPlan: state.solitSilverPlan,
