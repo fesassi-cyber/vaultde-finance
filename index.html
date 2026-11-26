@@ -264,6 +264,37 @@
               </div>
             </div>
           </div>
+
+          <!-- MONTHLY SAVE & INVEST PLAN -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-xs font-bold">Monthly Save &amp; Invest Plan (Drives Projections)</div>
+                <div class="text-xs text-[var(--muted-foreground)]">Feeds directly into your 5y / 10y / Retirement forecast</div>
+              </div>
+              <span id="totalSaveInvestBadge" class="sensitive px-2.5 py-1 rounded-full bg-[var(--primary)]/15 text-[var(--primary)] text-xs font-mono font-bold">€0/mo</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div>
+                <label class="block text-[var(--muted-foreground)] mb-1">Save Tagesgeld (€/mo)</label>
+                <input id="inTagesPlanTab1" type="number" step="50" min="0" oninput="updateField('tagesgeldPlan', +this.value)"
+                  class="sensitive w-full rounded-lg bg-[var(--card)] border border-[var(--border)] px-2.5 py-1.5 font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label class="block text-[var(--muted-foreground)] mb-1">Save Festgeld (€/mo)</label>
+                <input id="inFestPlanTab1" type="number" step="50" min="0" oninput="updateField('festgeldPlan', +this.value)"
+                  class="sensitive w-full rounded-lg bg-[var(--card)] border border-[var(--border)] px-2.5 py-1.5 font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+              </div>
+              <button onclick="switchTab('investments')" class="text-left rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)] px-2.5 py-1.5 transition">
+                <div class="text-[var(--muted-foreground)]">Invest (FFB+Solit) ↗</div>
+                <div id="tab1InvestMonthly" class="sensitive font-mono font-bold text-sm text-[var(--primary)] mt-0.5">€0/mo</div>
+              </button>
+              <button onclick="switchTab('retirement')" class="text-left rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)] px-2.5 py-1.5 transition">
+                <div class="text-[var(--muted-foreground)]">MetallRente (bAV) ↗</div>
+                <div id="tab1MetallMonthly" class="sensitive font-mono font-bold text-sm mt-0.5">€0/mo</div>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- RIGHT: ALLOCATION DONUT + QUARTERLY HISTORY -->
@@ -581,9 +612,19 @@
               <input id="inFestRate" type="number" step="0.1" min="0" max="10" oninput="updateField('festgeldRate', +this.value)"
                 class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
             </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Tagesgeld Save Plan (€/mo)</label>
+              <input id="inTagesPlan" type="number" step="50" min="0" oninput="updateField('tagesgeldPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Festgeld Save Plan (€/mo)</label>
+              <input id="inFestPlan" type="number" step="50" min="0" oninput="updateField('festgeldPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
           </div>
           <div class="text-xs text-[var(--muted-foreground)] flex justify-between pt-2 border-t border-[var(--border)]">
-            <span>Weighted Avg. Cash Yield</span>
+            <span id="cashPlanTotal" class="sensitive">Monthly Cash Savings: €0/mo</span>
             <span id="cashInterestYearly" class="sensitive font-mono font-semibold text-[var(--foreground)]">€0/yr</span>
           </div>
         </div>
@@ -659,6 +700,30 @@
           <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3">
             <div class="text-[var(--muted-foreground)]">Optimistic (+2%)</div>
             <div id="projOptimistic" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">€0</div>
+          </div>
+        </div>
+
+        <!-- MILESTONE PROJECTION TABLE -->
+        <div class="pt-2 border-t border-[var(--border)] space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-bold">Future Milestones Breakdown (Base Case)</span>
+            <span id="projMonthlyFlowSummary" class="sensitive font-mono text-[var(--muted-foreground)]"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse min-w-[540px]">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                  <th class="py-1.5 pr-2">Horizon</th>
+                  <th class="py-1.5 px-2 text-right">Cash Savings</th>
+                  <th class="py-1.5 px-2 text-right">FFB + Solit</th>
+                  <th class="py-1.5 px-2 text-right">MetallRente</th>
+                  <th class="py-1.5 px-2 text-right">Contributed</th>
+                  <th class="py-1.5 px-2 text-right">Growth</th>
+                  <th class="py-1.5 pl-2 text-right">Projected Total</th>
+                </tr>
+              </thead>
+              <tbody id="milestoneTableBody" class="divide-y divide-[var(--border)] font-mono tabular-nums sensitive"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -882,6 +947,14 @@
           <label class="block text-[var(--muted-foreground)] mb-1">Solit Silver (grams)</label>
           <input id="qSolitSilver" type="number" step="10" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
         </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Save Tagesgeld (€/mo)</label>
+          <input id="qTagesPlan" type="number" step="50" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Save Festgeld (€/mo)</label>
+          <input id="qFestPlan" type="number" step="50" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
       </div>
 
       <div class="space-y-2 text-xs">
@@ -1012,8 +1085,10 @@
       // Cash
       tagesgeld: 15000,
       tagesgeldRate: 2.75,
+      tagesgeldPlan: 300,
       festgeld: 20000,
       festgeldRate: 3.1,
+      festgeldPlan: 100,
       // Market Oracle
       market: { eurUsd: 1.08, goldEurPerG: 84.5, silverEurPerG: 0.96 },
       // Goals
@@ -1405,6 +1480,12 @@
     function updateField(key, val) {
       state[key] = val;
       if (key === 'retireAge') document.getElementById('wiRetireAge').value = val;
+      if (key === 'tagesgeldPlan') {
+        ['inTagesPlanTab1', 'inTagesPlan'].forEach(id => { const el = document.getElementById(id); if (el && +el.value !== val) el.value = val; });
+      }
+      if (key === 'festgeldPlan') {
+        ['inFestPlanTab1', 'inFestPlan'].forEach(id => { const el = document.getElementById(id); if (el && +el.value !== val) el.value = val; });
+      }
       persistState();
       renderAll();
     }
@@ -1466,6 +1547,7 @@
       const solitPlan = (state.solitGoldPlan || 0) + (state.solitSilverPlan || 0);
 
       const cashTotal = (state.tagesgeld || 0) + (state.festgeld || 0);
+      const cashPlan = (state.tagesgeldPlan || 0) + (state.festgeldPlan || 0);
       const cashInterest = (state.tagesgeld || 0) * ((state.tagesgeldRate || 0) / 100)
                          + (state.festgeld || 0) * ((state.festgeldRate || 0) / 100);
       const cashAvgYield = cashTotal > 0 ? (cashInterest / cashTotal) * 100 : 0;
@@ -1476,6 +1558,7 @@
 
       const metallTotal = state.metallBalance || 0;
       const netWorth = cashTotal + etfTotal + solitTotal + metallTotal;
+      const totalMonthlySaveInvest = cashPlan + etfPlan + solitPlan + (state.metallMonthly || 0);
       const monthlySurplus = pay.netMonthly - (state.monthlySpend || 0);
       const sparquote = pay.netMonthly > 0 ? (monthlySurplus / pay.netMonthly) * 100 : 0;
       const runwayMonths = state.monthlySpend > 0 ? cashTotal / state.monthlySpend : 0;
@@ -1503,26 +1586,45 @@
 
       const buildSeries = (deltaReturn, yrs, extraEtfMo) => {
         const pts = [];
-        let etf = etfTotal, solit = solitTotal, cash = cashTotal, metall = metallTotal;
+        let etf = etfTotal, solit = solitTotal;
+        let tages = state.tagesgeld || 0, fest = state.festgeld || 0;
+        let metall = metallTotal;
+        let contributed = netWorth;
+
         const rEtf = Math.max(0.01, (etfWeightedReturn + deltaReturn) / 100);
         const rSolit = Math.max(0.01, (4.0 + deltaReturn * 0.5) / 100);
-        const rCash = Math.max(0.005, cashAvgYield / 100);
+        const rTages = Math.max(0, (state.tagesgeldRate || 0) / 100);
+        const rFest = Math.max(0, (state.festgeldRate || 0) / 100);
         const rMet = Math.max(0.01, ((state.metallReturn || 4.5) + deltaReturn * 0.5) / 100);
         const useReal = document.getElementById('toggleRealTerms')?.checked ?? true;
         const baseYear = new Date().getFullYear();
 
+        const annualAdd = (etfPlan + extraEtfMo + solitPlan + cashPlan + (state.metallMonthly || 0)) * 12;
+
         for (let y = 0; y <= yrs; y++) {
           const defl = useReal ? Math.pow(1 + infl, y) : 1;
+          const cashSum = tages + fest;
+          const invSum = etf + solit;
+          const tot = (invSum + cashSum + metall) / defl;
+          const contribDefl = contributed / defl;
           pts.push({
+            yearOffset: y,
             age: (state.age || 35) + y,
             year: baseYear + y,
-            total: (etf + solit + cash + metall) / defl,
-            privateOnly: (etf + solit + cash) / defl
+            cash: cashSum / defl,
+            invested: invSum / defl,
+            metall: metall / defl,
+            contributed: contribDefl,
+            growth: Math.max(0, tot - contribDefl),
+            total: tot,
+            privateOnly: (invSum + cashSum) / defl
           });
           etf = etf * (1 + rEtf) + (etfPlan + extraEtfMo) * 12;
           solit = solit * (1 + rSolit) + solitPlan * 12;
-          cash = cash * (1 + rCash);
+          tages = tages * (1 + rTages) + (state.tagesgeldPlan || 0) * 12;
+          fest = fest * (1 + rFest) + (state.festgeldPlan || 0) * 12;
           metall = metall * (1 + rMet) + (state.metallMonthly || 0) * 12;
+          contributed += annualAdd;
         }
         return pts;
       };
@@ -1552,8 +1654,8 @@
       return {
         pay, etfTotal, etfPlan, etfWeightedReturn,
         solitGoldVal, solitSilverVal, solitTotal, solitPlan,
-        cashTotal, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
-        metallTotal, netWorth, monthlySurplus, sparquote, runwayMonths,
+        cashTotal, cashPlan, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
+        metallTotal, netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
         yearsToRetire, metallFutureNom, metallMonthlyReal, drvReal,
         privateMonthlyReal, baseSeries, consSeries, optSeries,
         wiExtraEtf, wiRetireAge, wiSwr, simMonthlyIncome, drawdown
@@ -1608,7 +1710,7 @@
       document.getElementById('kpiSparquote').textContent = `${m.sparquote.toFixed(1)}% savings rate`;
       document.getElementById('kpiRunway').textContent = `${m.runwayMonths.toFixed(1)} mo`;
       document.getElementById('kpiRunwaySub').textContent = `${fmtEUR(m.cashTotal)} cash buffer`;
-      document.getElementById('statusMonthlyInvest').textContent = `${fmtEUR(m.etfPlan + m.solitPlan)}/mo Sparplan`;
+      document.getElementById('statusMonthlyInvest').textContent = `${fmtEUR(m.totalMonthlySaveInvest)}/mo Save+Invest`;
 
       document.getElementById('tbGross').textContent = fmtEUR(m.pay.grossMonthly);
       document.getElementById('tbTax').textContent = '-' + fmtEUR(m.pay.taxMonthly);
@@ -1626,9 +1728,14 @@
         <div style="width:${pSpend.toFixed(1)}%; background:var(--muted-foreground)" title="Spending"></div>
         <div style="width:${pSave.toFixed(1)}%; background:var(--success)" title="Surplus"></div>`;
 
-      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan);
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan);
       document.getElementById('cashflowUnallocated').textContent =
-        unalloc >= 0 ? `Free cash after Sparpläne: +${fmtEUR(unalloc)}/mo` : `Sparpläne exceed surplus by ${fmtEUR(Math.abs(unalloc))}/mo`;
+        unalloc >= 0 ? `Unallocated cash after Save+Invest: +${fmtEUR(unalloc)}/mo` : `Plans exceed net surplus by ${fmtEUR(Math.abs(unalloc))}/mo`;
+
+      const saveInvestPct = m.pay.netMonthly > 0 ? ((m.totalMonthlySaveInvest / m.pay.netMonthly) * 100).toFixed(0) : 0;
+      document.getElementById('totalSaveInvestBadge').textContent = `${fmtEUR(m.totalMonthlySaveInvest)}/mo (${saveInvestPct}% of Net)`;
+      document.getElementById('tab1InvestMonthly').textContent = `${fmtEUR(m.etfPlan + m.solitPlan)}/mo`;
+      document.getElementById('tab1MetallMonthly').textContent = `${fmtEUR(state.metallMonthly || 0)}/mo`;
 
       renderDonut([
         { label: 'FFB ETFs', value: m.etfTotal, color: 'var(--chart-1)' },
@@ -1674,6 +1781,7 @@
       document.getElementById('solitSplitText').textContent = `Gold ${fmtEUR(m.solitGoldVal)} · Silver ${fmtEUR(m.solitSilverVal)}`;
       document.getElementById('solitPlanTotal').textContent = `${fmtEUR(m.solitPlan)}/mo`;
       document.getElementById('cashTotalBadge').textContent = fmtEUR(m.cashTotal);
+      document.getElementById('cashPlanTotal').textContent = `Monthly Cash Savings: ${fmtEUR(m.cashPlan)}/mo`;
       document.getElementById('cashInterestYearly').textContent = `${m.cashAvgYield.toFixed(2)}% · ${fmtEUR(m.cashInterest)}/yr`;
 
       // TAB 4 WHAT-IF, PROJECTIONS, GOALS & STRATEGY
@@ -1682,8 +1790,13 @@
       document.getElementById('wiSwrLabel').textContent = `${(m.wiSwr * 100).toFixed(1)}%`;
       document.getElementById('wiRetireIncomePreview').textContent = `Simulated Retirement Income: ${fmtEUR(m.simMonthlyIncome)}/mo`;
 
+      const simMonthlyFlow = m.totalMonthlySaveInvest + m.wiExtraEtf;
+      document.getElementById('projMonthlyFlowSummary').textContent =
+        `Injecting ${fmtEUR(simMonthlyFlow)}/mo (${fmtEUR(m.cashPlan)} cash + ${fmtEUR(m.etfPlan + m.solitPlan + m.wiExtraEtf)} invest + ${fmtEUR(state.metallMonthly || 0)} bAV)`;
+
       lastProjectionData = { cons: m.consSeries, base: m.baseSeries, opt: m.optSeries };
       renderProjectionChart(m.consSeries, m.baseSeries, m.optSeries);
+      renderMilestoneTable(m.baseSeries);
       document.getElementById('projConservative').textContent = fmtEUR(m.consSeries[m.consSeries.length - 1].total);
       document.getElementById('projBase').textContent = fmtEUR(m.baseSeries[m.baseSeries.length - 1].total);
       document.getElementById('projOptimistic').textContent = fmtEUR(m.optSeries[m.optSeries.length - 1].total);
@@ -1833,7 +1946,7 @@
       const x = (i) => padL + (i / n) * (W - padL - padR);
       const y = (v) => padT + (1 - v / maxY) * (H - padT - padB);
 
-      const path = (arr) => arr.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ');
+      const path = (arr, key = 'total') => arr.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ');
       const band = `${path(opt)} ` + cons.slice().reverse().map((p, idx) => `L${x(n - idx).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ') + ' Z';
 
       const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
@@ -1850,6 +1963,7 @@
       if (hoverIdx >= 0 && hoverIdx <= n) {
         const hx = x(hoverIdx);
         hoverEl = `<line x1="${hx}" y1="${padT}" x2="${hx}" y2="${H - padB}" stroke="var(--primary)" stroke-dasharray="3,3" />
+          <circle cx="${hx}" cy="${y(base[hoverIdx].contributed)}" r="3.5" fill="var(--warning)" />
           <circle cx="${hx}" cy="${y(cons[hoverIdx].total)}" r="4" fill="var(--muted-foreground)" />
           <circle cx="${hx}" cy="${y(base[hoverIdx].total)}" r="5" fill="var(--primary)" />
           <circle cx="${hx}" cy="${y(opt[hoverIdx].total)}" r="4" fill="var(--success)" />`;
@@ -1857,9 +1971,34 @@
 
       svg.innerHTML = gridY + xLabels +
         `<path d="${band}" fill="var(--primary)" opacity="0.08" />` +
+        `<path d="${path(base, 'contributed')}" fill="none" stroke="var(--warning)" stroke-width="1.4" stroke-dasharray="2,4" opacity="0.8" />` +
         `<path d="${path(cons)}" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-dasharray="4,4" />` +
         `<path d="${path(opt)}" fill="none" stroke="var(--success)" stroke-width="1.5" stroke-dasharray="4,4" />` +
         `<path d="${path(base)}" fill="none" stroke="var(--primary)" stroke-width="2.6" />` + hoverEl;
+    }
+
+    function renderMilestoneTable(baseSeries) {
+      const tbody = document.getElementById('milestoneTableBody');
+      if (!tbody || !baseSeries?.length) return;
+      const maxIdx = baseSeries.length - 1;
+      const indices = [];
+      [5, 10, 15, 20].forEach(y => { if (y < maxIdx) indices.push(y); });
+      indices.push(maxIdx);
+
+      tbody.innerHTML = indices.map(idx => {
+        const p = baseSeries[idx];
+        const isFinal = idx === maxIdx;
+        const label = isFinal ? `Retire (${p.year}, Age ${p.age})` : `+${p.yearOffset} yrs (${p.year}, Age ${p.age})`;
+        return `<tr class="${isFinal ? 'font-bold text-[var(--foreground)]' : 'text-[var(--muted-foreground)]'}">
+          <td class="py-2 pr-2 font-sans ${isFinal ? 'text-[var(--primary)]' : ''}">${label}</td>
+          <td class="py-2 px-2 text-right">${fmtEUR(p.cash)}</td>
+          <td class="py-2 px-2 text-right">${fmtEUR(p.invested)}</td>
+          <td class="py-2 px-2 text-right">${fmtEUR(p.metall)}</td>
+          <td class="py-2 px-2 text-right text-[var(--warning)]">${fmtEUR(p.contributed)}</td>
+          <td class="py-2 px-2 text-right text-[var(--success)]">+${fmtEUR(p.growth)}</td>
+          <td class="py-2 pl-2 text-right font-bold text-[var(--foreground)]">${fmtEUR(p.total)}</td>
+        </tr>`;
+      }).join('');
     }
 
     function renderGoals(m) {
@@ -1894,14 +2033,14 @@
       if (m.runwayMonths < 3) {
         tips.push({ tone: 'error', title: 'Build Emergency Buffer First', body: `Cash covers ${m.runwayMonths.toFixed(1)} months of spending. Target 3–6 months (${fmtEUR(state.monthlySpend * 3)}–${fmtEUR(state.monthlySpend * 6)}).` });
       } else if (m.runwayMonths > 12) {
-        tips.push({ tone: 'warning', title: 'Cash Drag Above 12 Months', body: `You hold ${m.runwayMonths.toFixed(1)} months in Tages-/Festgeld. Deploying excess into your FFB ETF Sparplan boosts long-term compounding.` });
+        tips.push({ tone: 'warning', title: 'Cash Drag Above 12 Months', body: `You hold ${m.runwayMonths.toFixed(1)} months in Tages-/Festgeld. Consider shifting some monthly cash savings (${fmtEUR(m.cashPlan)}/mo) into your FFB ETF Sparplan.` });
       } else {
-        tips.push({ tone: 'success', title: 'Optimal Emergency Buffer', body: `${m.runwayMonths.toFixed(1)} months of spending safely parked in Tagesgeld & Festgeld.` });
+        tips.push({ tone: 'success', title: 'Optimal Emergency Buffer', body: `${m.runwayMonths.toFixed(1)} months of spending safely parked in Tagesgeld & Festgeld (+${fmtEUR(m.cashPlan)}/mo added).` });
       }
 
-      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan);
+      const unalloc = m.monthlySurplus - (m.etfPlan + m.solitPlan + m.cashPlan);
       if (unalloc > 250) {
-        tips.push({ tone: 'primary', title: `Unallocated Monthly Surplus (+${fmtEUR(unalloc)}/mo)`, body: `After spending and automated Sparpläne, ~${fmtEUR(unalloc)}/mo stays idle. Try dragging the "Extra ETF Sparplan" slider above to see the compounding effect.` });
+        tips.push({ tone: 'primary', title: `Unallocated Monthly Surplus (+${fmtEUR(unalloc)}/mo)`, body: `After spending, cash savings (${fmtEUR(m.cashPlan)}/mo), and investments (${fmtEUR(m.etfPlan + m.solitPlan)}/mo), ~${fmtEUR(unalloc)}/mo stays idle. Drag the "Extra ETF Sparplan" slider above to see how much extra wealth it generates.` });
       }
 
       const metalPct = m.netWorth > 0 ? (m.solitTotal / m.netWorth) * 100 : 0;
@@ -2145,8 +2284,10 @@ Return ONLY a valid JSON block:
   "solitSilverPlan": 50,
   "tagesgeld": 15000,
   "tagesgeldRate": 2.75,
+  "tagesgeldPlan": 300,
   "festgeld": 20000,
   "festgeldRate": 3.1,
+  "festgeldPlan": 100,
   "advisorSummary": "2-3 sentence summary of Daniel Bossenz PDF takeaways & actions"
 }`;
 
@@ -2174,7 +2315,7 @@ Return ONLY a valid JSON block:
           'grossSalary', 'age', 'retireAge', 'monthlySpend',
           'drvCurrentMonthly', 'drvProjectedMonthly', 'metallBalance', 'metallMonthly',
           'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
-          'tagesgeld', 'tagesgeldRate', 'festgeld', 'festgeldRate'
+          'tagesgeld', 'tagesgeldRate', 'tagesgeldPlan', 'festgeld', 'festgeldRate', 'festgeldPlan'
         ];
         numKeys.forEach(k => { if (typeof parsed[k] === 'number' && !isNaN(parsed[k])) state[k] = parsed[k]; });
         if (['I','II','III','IV','V','VI'].includes(parsed.taxClass)) state.taxClass = parsed.taxClass;
@@ -2211,6 +2352,8 @@ Return ONLY a valid JSON block:
       document.getElementById('qMonthlySpend').value = state.monthlySpend || 0;
       document.getElementById('qSolitGold').value = state.solitGoldGrams || 0;
       document.getElementById('qSolitSilver').value = state.solitSilverGrams || 0;
+      document.getElementById('qTagesPlan').value = state.tagesgeldPlan || 0;
+      document.getElementById('qFestPlan').value = state.festgeldPlan || 0;
       document.getElementById('qBossenzNote').value = '';
       document.getElementById('qEtfInputs').innerHTML = (state.etfs || []).map((e, i) => `
         <div class="flex items-center justify-between gap-2">
@@ -2229,6 +2372,8 @@ Return ONLY a valid JSON block:
       state.monthlySpend = +document.getElementById('qMonthlySpend').value || 0;
       state.solitGoldGrams = +document.getElementById('qSolitGold').value || 0;
       state.solitSilverGrams = +document.getElementById('qSolitSilver').value || 0;
+      state.tagesgeldPlan = +document.getElementById('qTagesPlan').value || 0;
+      state.festgeldPlan = +document.getElementById('qFestPlan').value || 0;
       (state.etfs || []).forEach((e, i) => {
         const el = document.getElementById('qEtf_' + i);
         if (el) e.value = +el.value || 0;
@@ -2259,7 +2404,9 @@ Return ONLY a valid JSON block:
         inSolitGoldG: state.solitGoldGrams, inSolitGoldPlan: state.solitGoldPlan,
         inSolitSilverG: state.solitSilverGrams, inSolitSilverPlan: state.solitSilverPlan,
         inTagesgeld: state.tagesgeld, inTagesRate: state.tagesgeldRate,
+        inTagesPlan: state.tagesgeldPlan || 0, inTagesPlanTab1: state.tagesgeldPlan || 0,
         inFestgeld: state.festgeld, inFestRate: state.festgeldRate,
+        inFestPlan: state.festgeldPlan || 0, inFestPlanTab1: state.festgeldPlan || 0,
         mktEurUsd: state.market.eurUsd, mktGoldG: state.market.goldEurPerG, mktSilverG: state.market.silverEurPerG,
         wiRetireAge: state.retireAge || 67
       };
@@ -2297,7 +2444,7 @@ Return ONLY a valid JSON block:
           renderProjectionChart(lastProjectionData.cons, lastProjectionData.base, lastProjectionData.opt, idx);
           document.getElementById('chartHoverBar').firstElementChild.innerHTML =
             `<span class="font-semibold text-[var(--foreground)]">Age ${b.age} (${b.year}):</span> ` +
-            `<span class="sensitive font-mono">Cons ${fmtEUR(c.total)} · <b class="text-[var(--primary)]">Base ${fmtEUR(b.total)}</b> · Opt <b class="text-[var(--success)]">${fmtEUR(o.total)}</b></span>`;
+            `<span class="sensitive font-mono">Principal ${fmtEUR(b.contributed)} · <b class="text-[var(--primary)]">Base ${fmtEUR(b.total)}</b> (<span class="text-[var(--success)]">+${fmtEUR(b.growth)} growth</span>) · Opt ${fmtEUR(o.total)}</span>`;
         };
         projSvg.addEventListener('mousemove', (e) => handleMove(e.clientX));
         projSvg.addEventListener('touchmove', (e) => { if (e.touches[0]) handleMove(e.touches[0].clientX); }, { passive: true });
