@@ -42,9 +42,14 @@
       <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)]">
         Derived locally via <code class="font-mono">PBKDF2-SHA256 (250k)</code> + <code class="font-mono">AES-256-GCM</code>. Your passphrase is never stored or transmitted.
       </div>
-      <div class="flex items-center justify-end gap-2 pt-1">
-        <button id="lockCancelBtn" onclick="closeLockModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Cancel</button>
-        <button id="lockActionBtn" onclick="submitLockModal()" class="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">Unlock Vault</button>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <button id="lockResetBtn" onclick="startOverVault()" class="hidden px-3 py-2 rounded-xl border border-[var(--error)]/40 text-xs text-[var(--error)] hover:bg-[var(--error)]/10 transition">
+          ↺ Can't decrypt? Start Over
+        </button>
+        <div class="flex items-center gap-2 ml-auto">
+          <button id="lockCancelBtn" onclick="closeLockModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Cancel</button>
+          <button id="lockActionBtn" onclick="submitLockModal()" class="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">Unlock Vault</button>
+        </div>
       </div>
     </div>
   </div>
@@ -277,26 +282,26 @@
         <!-- GERMAN PAYROLL & PROFILE -->
         <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-4">
           <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold">Profile &amp; German Net Salary Engine (2025/26)</h2>
-            <button onclick="resetToDemo()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">↺ Demo</button>
+            <h2 class="text-sm font-bold">Profile &amp; Salary</h2>
+            <span id="tab1RetireYearBadge" class="text-xs font-mono text-[var(--primary)] font-semibold">Retire: 2055</span>
           </div>
 
-          <!-- BRUTTO <-> NETTO AUTO-CONVERTER -->
-          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2">
+          <!-- INDEPENDENT BRUTTO & NETTO (WITH OPTIONAL LINK) -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2.5">
             <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span class="font-semibold">German Brutto ⇄ Netto Auto-Converter</span>
-              <span id="salaryConvBadge" class="px-2 py-0.5 rounded-full bg-[var(--primary)]/15 text-[var(--primary)] font-mono">Gross/yr → Net/mo</span>
+              <span class="font-semibold">Salary (Brutto &amp; Netto)</span>
+              <label class="flex items-center gap-1.5 text-[var(--muted-foreground)] cursor-pointer select-none">
+                <input id="inLinkBruttoNetto" type="checkbox" onchange="updateField('linkBruttoNetto', this.checked)" class="accent-[var(--primary)] w-3.5 h-3.5" />
+                <span>Auto-link ⇄ <span class="hidden sm:inline">(turn on if one is unknown)</span></span>
+              </label>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-11 gap-2 items-end">
-              <div class="sm:col-span-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
                 <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gross Annual Brutto (€/yr)</label>
                 <input id="inGrossSalary" type="number" step="1000" min="0" oninput="onGrossSalaryInput(+this.value)"
                   class="sensitive w-full rounded-xl bg-[var(--card)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
               </div>
-              <div class="sm:col-span-1 flex items-center justify-center py-1 sm:pb-2 text-base font-bold text-[var(--primary)] select-none" title="Edit either side to auto-convert">
-                ⇄
-              </div>
-              <div class="sm:col-span-5">
+              <div>
                 <label class="block text-xs text-[var(--muted-foreground)] mb-1">Monthly Netto Salary (€/mo)</label>
                 <input id="inNetSalary" type="number" step="50" min="0" oninput="onNetSalaryInput(+this.value)"
                   class="sensitive w-full rounded-xl bg-[var(--card)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
@@ -322,7 +327,7 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Current Age / Target Retirement</label>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Current Age / Target Retirement (<span id="tab1RetireYrInline" class="font-mono text-[var(--foreground)]">2055</span>)</label>
               <div class="grid grid-cols-2 gap-2">
                 <input id="inAge" type="number" min="18" max="80" title="Current Age" oninput="updateField('age', +this.value)"
                   class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
@@ -492,7 +497,7 @@
 
           <div class="rounded-xl bg-[var(--background)] border border-[var(--primary)]/45 p-3.5 space-y-1.5">
             <div class="flex items-center justify-between text-xs">
-              <span class="font-semibold text-[var(--primary)]">2. IF YOU FOLLOW YOUR PLAN (To Age <span id="retPlanAgeLbl">67</span>)</span>
+              <span class="font-semibold text-[var(--primary)]">2. IF YOU FOLLOW YOUR PLAN (To Age <span id="retPlanAgeLbl">67</span> · <span id="retPlanYearLbl">2055</span>)</span>
               <span id="retPlannedPct" class="font-mono font-bold text-[var(--success)]">0% of target</span>
             </div>
             <div class="flex items-baseline gap-2">
@@ -694,7 +699,7 @@
         <div class="lg:col-span-7 rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 class="text-sm font-bold">Post-Retirement Drawdown Simulator (Age <span id="ddStartAge">67</span> → 95)</h3>
+              <h3 class="text-sm font-bold">Post-Retirement Drawdown Simulator (Age <span id="ddStartAge">67</span> / <span id="ddStartYear">2055</span> → 95)</h3>
               <p class="text-xs text-[var(--muted-foreground)]">Tests if your private wealth sustains your target income (after DRV, MetallRente &amp; Continentale) until age 95.</p>
             </div>
             <span id="drawdownVerdict" class="text-xs font-semibold px-2.5 py-1 rounded-full"></span>
@@ -1357,6 +1362,7 @@
       grossSalary: 82000,
       salaryMode: 'gross',
       netMonthlyOverride: 0,
+      linkBruttoNetto: false,
       taxClass: 'I',
       churchTax: 0,
       healthType: 'GKV',
@@ -1559,12 +1565,16 @@
       }
     }
 
+    let resetVaultArmed = false;
+
     function openSetPassphraseModal() {
       lockModalMode = 'set';
+      resetVaultArmed = false;
       document.getElementById('lockModalTitle').textContent = 'Encrypt Local Vault (AES-256-GCM)';
       document.getElementById('lockModalDesc').textContent = 'Set a master passphrase. All numbers & notes will be encrypted on this device.';
       document.getElementById('lockActionBtn').textContent = 'Encrypt & Protect';
       document.getElementById('lockCancelBtn').classList.remove('hidden');
+      document.getElementById('lockResetBtn').classList.add('hidden');
       document.getElementById('vaultPassphraseInput').value = '';
       document.getElementById('lockError').classList.add('hidden');
       document.getElementById('lockModal').classList.remove('hidden');
@@ -1573,14 +1583,40 @@
 
     function openUnlockModal() {
       lockModalMode = 'unlock';
+      resetVaultArmed = false;
       document.getElementById('lockModalTitle').textContent = 'Vault Locked (AES-256-GCM)';
       document.getElementById('lockModalDesc').textContent = 'Enter your master passphrase to decrypt your local vault.';
       document.getElementById('lockActionBtn').textContent = 'Unlock Vault';
       document.getElementById('lockCancelBtn').classList.add('hidden');
+      const rBtn = document.getElementById('lockResetBtn');
+      rBtn.textContent = "↺ Can't decrypt? Start Over";
+      rBtn.classList.remove('hidden');
       document.getElementById('vaultPassphraseInput').value = '';
       document.getElementById('lockError').classList.add('hidden');
       document.getElementById('lockModal').classList.remove('hidden');
       setTimeout(() => document.getElementById('vaultPassphraseInput').focus(), 40);
+    }
+
+    async function startOverVault() {
+      const btn = document.getElementById('lockResetBtn');
+      if (!resetVaultArmed) {
+        resetVaultArmed = true;
+        btn.textContent = '⚠ Tap again to wipe & start fresh';
+        return;
+      }
+      try {
+        localStorage.removeItem(ENCRYPTED_KEY);
+        localStorage.removeItem(STORAGE_KEY);
+        indexedDB.deleteDatabase(PDF_DB_NAME);
+      } catch (e) {}
+      activePassphrase = null;
+      resetVaultArmed = false;
+      state = structuredClone(DEFAULT_STATE);
+      updateEncryptBadge(false);
+      syncInputsFromState();
+      renderAll();
+      closeLockModal();
+      showToast('✓ Local vault wiped — starting fresh', 'warning');
     }
 
     function closeLockModal() {
@@ -1814,10 +1850,12 @@
     function onGrossSalaryInput(grossVal) {
       state.salaryMode = 'gross';
       state.grossSalary = Math.max(0, grossVal || 0);
-      const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
-      state.netMonthlyOverride = Math.round(pay.netMonthly);
-      const netEl = document.getElementById('inNetSalary');
-      if (netEl && document.activeElement !== netEl) netEl.value = Math.round(pay.netMonthly);
+      if (state.linkBruttoNetto) {
+        const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+        state.netMonthlyOverride = Math.round(pay.netMonthly);
+        const netEl = document.getElementById('inNetSalary');
+        if (netEl && document.activeElement !== netEl) netEl.value = Math.round(pay.netMonthly);
+      }
       persistState();
       renderAll();
     }
@@ -1825,9 +1863,11 @@
     function onNetSalaryInput(netMonthlyVal) {
       state.salaryMode = 'net';
       state.netMonthlyOverride = Math.max(0, netMonthlyVal || 0);
-      state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
-      const grossEl = document.getElementById('inGrossSalary');
-      if (grossEl && document.activeElement !== grossEl) grossEl.value = state.grossSalary;
+      if (state.linkBruttoNetto) {
+        state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+        const grossEl = document.getElementById('inGrossSalary');
+        if (grossEl && document.activeElement !== grossEl) grossEl.value = state.grossSalary;
+      }
       persistState();
       renderAll();
     }
@@ -1835,7 +1875,20 @@
     function updateField(key, val) {
       state[key] = val;
       if (key === 'retireAge') document.getElementById('wiRetireAge').value = val;
-      if (['taxClass', 'churchTax', 'healthType', 'pkvMonthly', 'hasChildren'].includes(key)) {
+      if (key === 'linkBruttoNetto' && val === true) {
+        // When user turns linking ON, only fill whichever side is missing/zero (or sync from last edited side)
+        if ((state.grossSalary || 0) === 0 && (state.netMonthlyOverride || 0) > 0) {
+          state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+          const gEl = document.getElementById('inGrossSalary');
+          if (gEl) gEl.value = state.grossSalary;
+        } else if ((state.netMonthlyOverride || 0) === 0 && (state.grossSalary || 0) > 0) {
+          const p = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+          state.netMonthlyOverride = Math.round(p.netMonthly);
+          const nEl = document.getElementById('inNetSalary');
+          if (nEl) nEl.value = Math.round(p.netMonthly);
+        }
+      }
+      if (state.linkBruttoNetto && ['taxClass', 'churchTax', 'healthType', 'pkvMonthly', 'hasChildren'].includes(key)) {
         if (state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0) {
           state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
           const gEl = document.getElementById('inGrossSalary');
@@ -1902,8 +1955,11 @@
     // =========================================================
     function computeMetrics() {
       const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
-      if (state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0) {
+      if ((state.netMonthlyOverride || 0) > 0 && (!state.linkBruttoNetto || state.salaryMode === 'net')) {
         pay.netMonthly = state.netMonthlyOverride;
+        if (pay.grossMonthly > 0) {
+          pay.effectiveRate = Math.max(0, ((pay.grossMonthly - pay.netMonthly) / pay.grossMonthly) * 100);
+        }
       }
       const etfTotal = (state.etfs || []).reduce((s, e) => s + (Number(e.value) || 0), 0);
       const etfPlan = (state.etfs || []).reduce((s, e) => s + (Number(e.monthlyPlan) || 0), 0);
@@ -1943,6 +1999,7 @@
       const wiSwr = +(document.getElementById('wiSwr')?.value || 3.5) / 100;
 
       const yearsToRetire = Math.max(1, (state.retireAge || 67) - (state.age || 35));
+      const retireYear = new Date().getFullYear() + yearsToRetire;
       const simYears = Math.max(1, wiRetireAge - (state.age || 35));
       const infl = (state.inflation || 2) / 100;
       const inflFactor = Math.pow(1 + infl, yearsToRetire);
@@ -2070,7 +2127,7 @@
         cashTotal, cashPlan, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
         metallTotal, contiTotal, contiMonthly, contiFutureNom, contiMonthlyReal,
         netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
-        yearsToRetire, metallFutureNom, metallMonthlyReal, drvReal,
+        yearsToRetire, retireYear, metallFutureNom, metallMonthlyReal, drvReal,
         privateMonthlyReal, accruedDrvReal, accruedMetallReal, accruedContiReal, accruedPrivateReal,
         accruedTotalMonthly, plannedTotalMonthly, annualContribYr, annualPassiveGrowthYr,
         baselineSeries, baseSeries, consSeries, optSeries,
@@ -2133,10 +2190,8 @@
       document.getElementById('tbSocial').textContent = '-' + fmtEUR(m.pay.socialMonthly);
       document.getElementById('tbNet').textContent = fmtEUR(m.pay.netMonthly);
 
-      const convBadge = document.getElementById('salaryConvBadge');
-      if (convBadge) {
-        convBadge.textContent = state.salaryMode === 'net' ? 'Net/mo → Gross/yr (Auto)' : 'Gross/yr → Net/mo (Auto)';
-      }
+      document.getElementById('tab1RetireYearBadge').textContent = `Retire: ${m.retireYear} (Age ${state.retireAge})`;
+      document.getElementById('tab1RetireYrInline').textContent = m.retireYear;
       const equivStrip = document.getElementById('salaryEquivStrip');
       if (equivStrip) {
         equivStrip.innerHTML = `<span>Monthly Brutto: ${fmtEUR(m.pay.grossMonthly)}/mo</span><span>Annual Netto: ${fmtEUR(m.pay.netMonthly * 12)}/yr</span>`;
@@ -2188,8 +2243,10 @@
       const gapEl = document.getElementById('retGapStatus');
       gapEl.textContent = `${gap >= 0 ? '+' : ''}${fmtEUR(gap)}/mo (${gap >= 0 ? 'Surplus' : 'Gap'})`;
       gapEl.className = `sensitive font-mono ${gap >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`;
-      document.getElementById('retYearsLeft').textContent = `${m.yearsToRetire} yrs left`;
+      document.getElementById('retYearsLeft').textContent = `${m.yearsToRetire} yrs · ${m.retireYear}`;
       document.getElementById('ddStartAge').textContent = state.retireAge || 67;
+      const ddYr = document.getElementById('ddStartYear');
+      if (ddYr) ddYr.textContent = m.retireYear;
 
       renderRetirementBars(m.drvReal, m.metallMonthlyReal, m.contiMonthlyReal, m.privateMonthlyReal, state.retireTargetMonthly || 3000);
       renderDrawdownChart(m.drawdown);
@@ -2389,6 +2446,8 @@
       document.getElementById('retReplacementRatio').textContent = `${replNet}% of current net salary`;
       document.getElementById('retSpendCoverage').textContent = `Covers ${replSpend}% of current monthly spend`;
       document.getElementById('retPlanAgeLbl').textContent = state.retireAge || 67;
+      const planYr = document.getElementById('retPlanYearLbl');
+      if (planYr) planYr.textContent = m.retireYear;
 
       document.getElementById('retAccruedPct').textContent = `${accPct}% of target`;
       document.getElementById('retAccruedTotal').textContent = fmtEUR(m.accruedTotalMonthly);
@@ -3289,7 +3348,7 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
 
     function syncInputsFromState() {
       const calcNet = Math.round(calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren).netMonthly);
-      const netVal = state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0 ? state.netMonthlyOverride : calcNet;
+      const netVal = (state.netMonthlyOverride || 0) > 0 ? state.netMonthlyOverride : calcNet;
       const map = {
         inGrossSalary: state.grossSalary, inNetSalary: netVal, inTaxClass: state.taxClass, inChurchTax: state.churchTax,
         inHealthType: state.healthType || 'GKV', inPkvMonthly: state.pkvMonthly || 420,
@@ -3317,6 +3376,8 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
       if (ch) ch.checked = !!state.hasChildren;
       const ffbRet = document.getElementById('inIncludeFfbRetire');
       if (ffbRet) ffbRet.checked = !!state.includeFfbInRetirement;
+      const linkBN = document.getElementById('inLinkBruttoNetto');
+      if (linkBN) linkBN.checked = !!state.linkBruttoNetto;
     }
 
     // =========================================================
