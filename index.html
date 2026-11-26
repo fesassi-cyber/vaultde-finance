@@ -167,6 +167,91 @@
         </div>
       </div>
 
+      <!-- EXECUTIVE INSIGHTS STRIP -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- 1. FINANCIAL HEALTH SCORE -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-bold">Financial Health Score</h2>
+              <p id="healthGradeText" class="text-xs text-[var(--muted-foreground)]">5-pillar German wealth check</p>
+            </div>
+            <svg id="healthScoreRing" viewBox="0 0 64 64" class="w-14 h-14 shrink-0"></svg>
+          </div>
+          <div id="healthPillarsList" class="space-y-1.5 text-xs"></div>
+        </div>
+
+        <!-- 2. WEALTH VELOCITY & 1Y/3Y/5Y MINI-FORECAST -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 flex flex-col justify-between space-y-3">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Annual Wealth Velocity</h2>
+              <span id="velTotalYr" class="sensitive text-xs font-mono font-bold text-[var(--success)]">+€0/yr</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+                <div class="text-[var(--muted-foreground)]">Your Contributions</div>
+                <div id="velContribYr" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--primary)]">+€0/yr</div>
+              </div>
+              <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+                <div class="text-[var(--muted-foreground)]">Est. Passive Growth</div>
+                <div id="velGrowthYr" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">+€0/yr</div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-1.5 pt-2 border-t border-[var(--border)]">
+            <div class="flex justify-between text-xs">
+              <span class="text-[var(--muted-foreground)]">Quick Forecast (Today's €)</span>
+              <span id="nextMilestoneEta" class="font-mono text-[var(--primary)] font-semibold"></span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-xs text-center">
+              <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
+                <div class="text-[var(--muted-foreground)]">+1 Yr</div>
+                <div id="miniProj1y" class="sensitive font-mono font-bold mt-0.5">€0</div>
+              </div>
+              <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
+                <div class="text-[var(--muted-foreground)]">+3 Yrs</div>
+                <div id="miniProj3y" class="sensitive font-mono font-bold mt-0.5">€0</div>
+              </div>
+              <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] py-1.5 px-1">
+                <div class="text-[var(--muted-foreground)]">+5 Yrs</div>
+                <div id="miniProj5y" class="sensitive font-mono font-bold mt-0.5 text-[var(--primary)]">€0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. LIQUID VS LOCKED WEALTH & MONTHLY NET SPLIT -->
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 flex flex-col justify-between space-y-3">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Liquid vs. Locked Wealth</h2>
+              <span id="liquidPctBadge" class="text-xs font-mono text-[var(--muted-foreground)]">0% liquid</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+                <div class="text-[var(--muted-foreground)]">Accessible Today</div>
+                <div id="statLiquidWealth" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--success)]">€0</div>
+                <div class="text-[11px] text-[var(--muted-foreground)]">Cash + FFB + Solit</div>
+              </div>
+              <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+                <div class="text-[var(--muted-foreground)]">Locked (Pensions)</div>
+                <div id="statLockedWealth" class="sensitive font-mono font-bold text-sm mt-0.5 text-[var(--chart-3)]">€0</div>
+                <div class="text-[11px] text-[var(--muted-foreground)]">MetallRente + Conti</div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-1.5 pt-2 border-t border-[var(--border)] text-xs">
+            <div class="flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Monthly Net Salary Split</span>
+              <span id="statRetireQuick" class="font-mono font-semibold cursor-pointer text-[var(--primary)] hover:underline" onclick="switchTab('retirement')">Retire: 0% →</span>
+            </div>
+            <div id="netSplitBar" class="w-full h-3 rounded-full overflow-hidden flex bg-[var(--background)]"></div>
+            <div id="netSplitLegend" class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--muted-foreground)]"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- PROFILE + ALLOCATION -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <!-- GERMAN PAYROLL & PROFILE -->
@@ -353,6 +438,76 @@
     <!-- TAB 2: RETIREMENT (DRV, METALLRENTE, CONTINENTALE)        -->
     <!-- ========================================================= -->
     <section id="tab-retirement" class="hidden space-y-4">
+      <!-- RETIREMENT READINESS HERO SCORECARD -->
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-base font-bold">Retirement Readiness: Today vs. Your Plan</h2>
+              <span id="retVerdictBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold">Checking...</span>
+            </div>
+            <p id="retVerdictDesc" class="text-xs text-[var(--muted-foreground)] mt-1"></p>
+          </div>
+          <div class="text-right text-xs">
+            <div class="text-[var(--muted-foreground)]">Income Replacement</div>
+            <div id="retReplacementRatio" class="font-mono font-bold text-sm text-[var(--foreground)]">0% of current net</div>
+          </div>
+        </div>
+
+        <!-- SIDE-BY-SIDE: ACCRUED TODAY vs FOLLOW PLAN -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-semibold text-[var(--muted-foreground)]">1. WHERE YOU ARE TODAY (If You Stopped Saving)</span>
+              <span id="retAccruedPct" class="font-mono font-bold text-[var(--warning)]">0% of target</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="retAccruedTotal" class="sensitive text-2xl font-bold font-mono tabular-nums">€0</span>
+              <span class="text-xs text-[var(--muted-foreground)]">/ month (Today's €)</span>
+            </div>
+            <div id="retAccruedBreakdown" class="sensitive text-xs text-[var(--muted-foreground)] font-mono">
+              DRV €0 · Metall €0 · Conti €0 · Private €0
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--primary)]/45 p-3.5 space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-semibold text-[var(--primary)]">2. IF YOU FOLLOW YOUR PLAN (To Age <span id="retPlanAgeLbl">67</span>)</span>
+              <span id="retPlannedPct" class="font-mono font-bold text-[var(--success)]">0% of target</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="retPlannedTotal" class="sensitive text-2xl font-bold font-mono tabular-nums text-[var(--primary)]">€0</span>
+              <span class="text-xs text-[var(--muted-foreground)]">/ month (Today's €)</span>
+              <span id="retPlanGainBadge" class="sensitive text-xs font-mono text-[var(--success)] font-semibold ml-auto">+€0 from plan</span>
+            </div>
+            <div id="retPlannedBreakdown" class="sensitive text-xs text-[var(--muted-foreground)] font-mono">
+              DRV €0 · Metall €0 · Conti €0 · Private €0
+            </div>
+          </div>
+        </div>
+
+        <!-- VISUAL TARGET THERMOMETER -->
+        <div class="space-y-1.5 text-xs">
+          <div class="flex justify-between text-[var(--muted-foreground)]">
+            <span>Progress Toward Monthly Target (<span id="retThermoTarget" class="sensitive font-mono font-semibold text-[var(--foreground)]">€0/mo</span>)</span>
+            <span id="retSpendCoverage" class="font-mono"></span>
+          </div>
+          <div class="relative w-full h-5 rounded-full bg-[var(--background)] border border-[var(--border)] overflow-hidden">
+            <div id="retThermoAccrued" class="absolute inset-y-0 left-0 transition-all" style="width:0%; background:var(--warning); opacity:0.85" title="Accrued Today (if stopped saving)"></div>
+            <div id="retThermoPlanGain" class="absolute inset-y-0 transition-all" style="left:0%; width:0%; background:var(--primary)" title="Added by following your plan"></div>
+            <div id="retThermoTargetLine" class="absolute inset-y-0 w-0.5 bg-[var(--foreground)] z-10" style="left:80%" title="Your Target"></div>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:var(--warning)"></span>Earned So Far</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:var(--primary)"></span>Added by Future Plan</span>
+              <span class="flex items-center gap-1.5"><span class="w-0.5 h-3 inline-block bg-[var(--foreground)]"></span>Target Line</span>
+            </div>
+            <span id="retActionHint" class="font-medium text-[var(--foreground)]"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- LAYER 1: DRV -->
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
@@ -1844,6 +1999,29 @@
       const privateAtRetireReal = baselineSeries[baselineSeries.length - 1].privateOnly;
       const privateMonthlyReal = (privateAtRetireReal * 0.035) / 12;
 
+      // "IF YOU STOPPED SAVING TODAY" (Accrued entitlement only, €0 future contributions)
+      const accruedDrvNom = (state.drvCurrentMonthly || 0) * Math.pow(1 + (state.drvGrowthRate || 1.5) / 100, yearsToRetire);
+      const accruedDrvReal = (accruedDrvNom / inflFactor) * 0.85;
+      const accruedMetallReal = ((metallTotal * Math.pow(1 + rM, nM) / inflFactor) * 0.042 / 12) * 0.78;
+      const accruedContiReal = ((contiTotal * Math.pow(1 + rC, nM) / inflFactor) * 0.040 / 12) * contiNetFactor;
+      const accruedPrivCapReal = (
+        etfTotal * Math.pow(1 + etfWeightedReturn / 100, yearsToRetire) +
+        solitTotal * Math.pow(1.04, yearsToRetire) +
+        cashTotal * Math.pow(1 + cashAvgYield / 100, yearsToRetire)
+      ) / inflFactor;
+      const accruedPrivateReal = (accruedPrivCapReal * 0.035) / 12;
+      const accruedTotalMonthly = accruedDrvReal + accruedMetallReal + accruedContiReal + accruedPrivateReal;
+      const plannedTotalMonthly = drvReal + metallMonthlyReal + contiMonthlyReal + privateMonthlyReal;
+
+      // Annual Wealth Velocity (this year)
+      const annualContribYr = totalMonthlySaveInvest * 12;
+      const annualPassiveGrowthYr =
+        etfTotal * (etfWeightedReturn / 100) +
+        solitTotal * 0.04 +
+        cashInterest +
+        metallTotal * ((state.metallReturn || 4.5) / 100) +
+        contiTotal * ((state.continentaleReturn || 5.0) / 100);
+
       const simPrivateAtRetire = baseSeries[baseSeries.length - 1].privateOnly;
       const simMonthlyIncome = drvReal + metallMonthlyReal + contiMonthlyReal + (simPrivateAtRetire * wiSwr) / 12;
 
@@ -1851,7 +2029,7 @@
       const drawdown = [];
       let bal = privateAtRetireReal;
       const neededFromPrivateMonthly = Math.max(0, (state.retireTargetMonthly || 3000) - (drvReal + metallMonthlyReal + contiMonthlyReal));
-      const realPostRetireReturn = Math.max(0.005, (etfWeightedReturn / 100 - infl) * 0.55); // de-risked balanced portfolio
+      const realPostRetireReturn = Math.max(0.005, (etfWeightedReturn / 100 - infl) * 0.55);
       const startAge = state.retireAge || 67;
       for (let a = startAge; a <= 95; a++) {
         drawdown.push({ age: a, balance: Math.max(0, bal) });
@@ -1865,7 +2043,9 @@
         metallTotal, contiTotal, contiMonthly, contiFutureNom, contiMonthlyReal,
         netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
         yearsToRetire, metallFutureNom, metallMonthlyReal, drvReal,
-        privateMonthlyReal, baseSeries, consSeries, optSeries,
+        privateMonthlyReal, accruedDrvReal, accruedMetallReal, accruedContiReal, accruedPrivateReal,
+        accruedTotalMonthly, plannedTotalMonthly, annualContribYr, annualPassiveGrowthYr,
+        baselineSeries, baseSeries, consSeries, optSeries,
         wiExtraEtf, wiRetireAge, wiSwr, simMonthlyIncome, drawdown
       };
     }
@@ -2022,10 +2202,153 @@
       document.getElementById('projBase').textContent = fmtEUR(m.baseSeries[m.baseSeries.length - 1].total);
       document.getElementById('projOptimistic').textContent = fmtEUR(m.optSeries[m.optSeries.length - 1].total);
 
+      renderExecutiveStatus(m);
+      renderRetirementHero(m);
       renderGoals(m);
       renderStrategy(m);
       renderAdvisorDocs();
       renderAdvisorActions();
+    }
+
+    function renderExecutiveStatus(m) {
+      // 1. 5-Pillar Financial Health Score (0-100)
+      const sLiq = Math.min(20, (Math.min(m.runwayMonths, 6) / 6) * 20);
+      const sSave = Math.min(20, (Math.max(0, m.sparquote) / 25) * 20);
+      const eqShare = m.netWorth > 0 ? (m.etfTotal / m.netWorth) * 100 : 0;
+      const sGrowth = Math.min(20, (eqShare / 45) * 20);
+      const metalShare = m.netWorth > 0 ? (m.solitTotal / m.netWorth) * 100 : 0;
+      const sMetal = metalShare >= 5 && metalShare <= 18 ? 20 : metalShare > 0 ? 14 : 6;
+      const retPct = (state.retireTargetMonthly || 3000) > 0 ? (m.plannedTotalMonthly / (state.retireTargetMonthly || 3000)) * 100 : 100;
+      const sRet = Math.min(20, (retPct / 100) * 20);
+      const totalScore = Math.round(sLiq + sSave + sGrowth + sMetal + sRet);
+
+      const scoreColor = totalScore >= 80 ? 'var(--success)' : totalScore >= 60 ? 'var(--primary)' : 'var(--warning)';
+      const grade = totalScore >= 85 ? 'Excellent Wealth Architecture' : totalScore >= 70 ? 'Strong & On Track' : totalScore >= 55 ? 'Solid — Room to Optimize' : 'Needs Attention';
+      document.getElementById('healthGradeText').textContent = grade;
+
+      const r = 24, circ = 2 * Math.PI * r, dash = (totalScore / 100) * circ;
+      document.getElementById('healthScoreRing').innerHTML = `
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--border)" stroke-width="6" />
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="${scoreColor}" stroke-width="6" stroke-linecap="round"
+          stroke-dasharray="${dash} ${circ - dash}" transform="rotate(-90 32 32)" />
+        <text x="32" y="36" text-anchor="middle" fill="var(--foreground)" font-size="14" font-weight="700" font-family="monospace">${totalScore}</text>`;
+
+      const pillars = [
+        { name: 'Liquidity Buffer', val: sLiq, max: 20, detail: `${m.runwayMonths.toFixed(1)} mo` },
+        { name: 'Savings Rate', val: sSave, max: 20, detail: `${m.sparquote.toFixed(0)}%` },
+        { name: 'Equity Growth (FFB)', val: sGrowth, max: 20, detail: `${eqShare.toFixed(0)}%` },
+        { name: 'Metal Hedge (Solit)', val: sMetal, max: 20, detail: `${metalShare.toFixed(0)}%` },
+        { name: 'Retirement Funded', val: sRet, max: 20, detail: `${Math.round(retPct)}%` }
+      ];
+      document.getElementById('healthPillarsList').innerHTML = pillars.map(p => `
+        <div class="flex items-center gap-2">
+          <span class="w-28 text-[var(--muted-foreground)] truncate">${p.name}</span>
+          <div class="flex-1 h-1.5 rounded-full bg-[var(--background)] overflow-hidden">
+            <div style="width:${((p.val / p.max) * 100).toFixed(0)}%; background:${scoreColor}" class="h-full rounded-full"></div>
+          </div>
+          <span class="w-10 text-right font-mono">${p.detail}</span>
+        </div>`).join('');
+
+      // 2. Annual Wealth Velocity & 1y/3y/5y Mini-Forecast
+      const totVel = m.annualContribYr + m.annualPassiveGrowthYr;
+      document.getElementById('velTotalYr').textContent = `+${fmtEUR(totVel)}/yr`;
+      document.getElementById('velContribYr').textContent = `+${fmtEUR(m.annualContribYr)}/yr`;
+      document.getElementById('velGrowthYr').textContent = `+${fmtEUR(m.annualPassiveGrowthYr)}/yr`;
+
+      const bs = m.baselineSeries || [];
+      const atYr = (y) => bs[Math.min(y, bs.length - 1)]?.total || m.netWorth;
+      document.getElementById('miniProj1y').textContent = fmtEUR(atYr(1));
+      document.getElementById('miniProj3y').textContent = fmtEUR(atYr(3));
+      document.getElementById('miniProj5y').textContent = fmtEUR(atYr(5));
+
+      const milestones = [100000, 150000, 200000, 250000, 300000, 500000, 750000, 1000000, 1500000, 2000000];
+      const nextMs = milestones.find(x => x > m.netWorth) || (Math.ceil((m.netWorth + 1) / 500000) * 500000);
+      const hitMs = bs.find(p => p.total >= nextMs);
+      document.getElementById('nextMilestoneEta').textContent = hitMs
+        ? `Next ${fmtEUR(nextMs)}: ${hitMs.year}`
+        : `Next: ${fmtEUR(nextMs)}`;
+
+      // 3. Liquid vs. Locked Wealth & Net Pay Split
+      const liquid = m.cashTotal + m.etfTotal + m.solitTotal;
+      const locked = m.metallTotal + m.contiTotal;
+      const liqPct = m.netWorth > 0 ? ((liquid / m.netWorth) * 100).toFixed(0) : 0;
+      document.getElementById('liquidPctBadge').textContent = `${liqPct}% liquid`;
+      document.getElementById('statLiquidWealth').textContent = fmtEUR(liquid);
+      document.getElementById('statLockedWealth').textContent = fmtEUR(locked);
+      document.getElementById('statRetireQuick').textContent = `Retire: ${Math.round(retPct)}% funded →`;
+
+      const netM = m.pay.netMonthly || 1;
+      const segs = [
+        { label: 'Spend', val: state.monthlySpend || 0, color: 'var(--muted-foreground)' },
+        { label: 'Cash', val: m.cashPlan, color: 'var(--chart-2)' },
+        { label: 'Invest', val: m.etfPlan + m.solitPlan, color: 'var(--chart-1)' },
+        { label: 'Conti', val: m.contiMonthly, color: 'var(--chart-5)' },
+        { label: 'Free', val: Math.max(0, m.monthlySurplus - (m.cashPlan + m.etfPlan + m.solitPlan + m.contiMonthly)), color: 'var(--success)' }
+      ].filter(s => s.val > 0);
+      const segSum = segs.reduce((a, b) => a + b.val, 0) || netM;
+      document.getElementById('netSplitBar').innerHTML = segs.map(s =>
+        `<div style="width:${((s.val / segSum) * 100).toFixed(1)}%; background:${s.color}" title="${s.label}: ${fmtEUR(s.val)}/mo"></div>`
+      ).join('');
+      document.getElementById('netSplitLegend').innerHTML = segs.map(s =>
+        `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm inline-block" style="background:${s.color}"></span>${s.label} ${Math.round((s.val / netM) * 100)}%</span>`
+      ).join('');
+    }
+
+    function renderRetirementHero(m) {
+      const target = state.retireTargetMonthly || 3000;
+      const accPct = Math.round((m.accruedTotalMonthly / target) * 100);
+      const planPct = Math.round((m.plannedTotalMonthly / target) * 100);
+      const planGain = Math.max(0, m.plannedTotalMonthly - m.accruedTotalMonthly);
+      const gap = m.plannedTotalMonthly - target;
+
+      const badge = document.getElementById('retVerdictBadge');
+      const desc = document.getElementById('retVerdictDesc');
+      if (planPct >= 100) {
+        badge.textContent = `✓ ON TRACK (${planPct}% Funded)`;
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--success)]/15 text-[var(--success)] border border-[var(--success)]/30';
+        desc.textContent = `If you stick to your plan until age ${state.retireAge}, you are projected to beat your target by +${fmtEUR(gap)}/mo in today's purchasing power.`;
+      } else if (planPct >= 85) {
+        badge.textContent = `◐ CLOSE (${planPct}% Funded)`;
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--warning)]/15 text-[var(--warning)] border border-[var(--warning)]/30';
+        desc.textContent = `You're nearly there — projected ${fmtEUR(Math.abs(gap))}/mo shy of target. Adding ~${fmtEUR(Math.abs(gap) * 0.4)}/mo to FFB ETFs closes the gap.`;
+      } else {
+        badge.textContent = `⚠ GAP TO CLOSE (${planPct}% Funded)`;
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--error)]/15 text-[var(--error)] border border-[var(--error)]/30';
+        desc.textContent = `Projected income is ${fmtEUR(Math.abs(gap))}/mo below target. Increase your monthly ETF/pension contributions or test Tab 4 What-If sliders.`;
+      }
+
+      const replNet = m.pay.netMonthly > 0 ? Math.round((m.plannedTotalMonthly / m.pay.netMonthly) * 100) : 0;
+      const replSpend = (state.monthlySpend || 0) > 0 ? Math.round((m.plannedTotalMonthly / state.monthlySpend) * 100) : 0;
+      document.getElementById('retReplacementRatio').textContent = `${replNet}% of current net salary`;
+      document.getElementById('retSpendCoverage').textContent = `Covers ${replSpend}% of current monthly spend`;
+      document.getElementById('retPlanAgeLbl').textContent = state.retireAge || 67;
+
+      document.getElementById('retAccruedPct').textContent = `${accPct}% of target`;
+      document.getElementById('retAccruedTotal').textContent = fmtEUR(m.accruedTotalMonthly);
+      document.getElementById('retAccruedBreakdown').textContent =
+        `DRV ${fmtEUR(m.accruedDrvReal)} · Metall ${fmtEUR(m.accruedMetallReal)} · Conti ${fmtEUR(m.accruedContiReal)} · Priv ${fmtEUR(m.accruedPrivateReal)}`;
+
+      document.getElementById('retPlannedPct').textContent = `${planPct}% of target`;
+      document.getElementById('retPlannedPct').className = `font-mono font-bold ${planPct >= 100 ? 'text-[var(--success)]' : planPct >= 85 ? 'text-[var(--warning)]' : 'text-[var(--error)]'}`;
+      document.getElementById('retPlannedTotal').textContent = fmtEUR(m.plannedTotalMonthly);
+      document.getElementById('retPlanGainBadge').textContent = `+${fmtEUR(planGain)}/mo from plan`;
+      document.getElementById('retPlannedBreakdown').textContent =
+        `DRV ${fmtEUR(m.drvReal)} · Metall ${fmtEUR(m.metallMonthlyReal)} · Conti ${fmtEUR(m.contiMonthlyReal)} · Priv ${fmtEUR(m.privateMonthlyReal)}`;
+
+      // Thermometer bar scaling
+      const scaleMax = Math.max(target * 1.25, m.plannedTotalMonthly * 1.05, 1000);
+      const wAcc = Math.min(100, (m.accruedTotalMonthly / scaleMax) * 100);
+      const wGain = Math.min(100 - wAcc, (planGain / scaleMax) * 100);
+      const targetPos = Math.min(98, (target / scaleMax) * 100);
+
+      document.getElementById('retThermoTarget').textContent = `${fmtEUR(target)}/mo`;
+      document.getElementById('retThermoAccrued').style.width = `${wAcc.toFixed(1)}%`;
+      document.getElementById('retThermoPlanGain').style.left = `${wAcc.toFixed(1)}%`;
+      document.getElementById('retThermoPlanGain').style.width = `${wGain.toFixed(1)}%`;
+      document.getElementById('retThermoTargetLine').style.left = `${targetPos.toFixed(1)}%`;
+      document.getElementById('retActionHint').textContent = gap >= 0
+        ? `Surplus buffer: +${fmtEUR(gap)}/mo`
+        : `Needed: +${fmtEUR(Math.abs(gap))}/mo`;
     }
 
     function renderDonut(slices) {
