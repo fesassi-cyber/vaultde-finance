@@ -31,8 +31,9 @@ jobs:
 
       - name: Compile zero-CDN Tailwind v4 CSS
         run: |
+          npm install --no-save tailwindcss@4 @tailwindcss/cli@4
           mkdir -p dist
-          npx @tailwindcss/cli@4 -i ./src/input.css -o ./dist/styles.css --minify
+          ./node_modules/.bin/tailwindcss -i ./src/input.css -o ./dist/styles.css --minify
           cp index.html manifest.json sw.js icon-192.png icon-512.png dist/
 
       - name: Configure Pages
