@@ -176,12 +176,34 @@
             <button onclick="resetToDemo()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">↺ Demo</button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gross Annual Salary (€/yr)</label>
-              <input id="inGrossSalary" type="number" step="1000" min="0" oninput="updateField('grossSalary', +this.value)"
-                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+          <!-- BRUTTO <-> NETTO AUTO-CONVERTER -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-semibold">German Brutto ⇄ Netto Auto-Converter</span>
+              <span id="salaryConvBadge" class="px-2 py-0.5 rounded-full bg-[var(--primary)]/15 text-[var(--primary)] font-mono">Gross/yr → Net/mo</span>
             </div>
+            <div class="grid grid-cols-1 sm:grid-cols-11 gap-2 items-end">
+              <div class="sm:col-span-5">
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1">Gross Annual Brutto (€/yr)</label>
+                <input id="inGrossSalary" type="number" step="1000" min="0" oninput="onGrossSalaryInput(+this.value)"
+                  class="sensitive w-full rounded-xl bg-[var(--card)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div class="sm:col-span-1 flex items-center justify-center py-1 sm:pb-2 text-base font-bold text-[var(--primary)] select-none" title="Edit either side to auto-convert">
+                ⇄
+              </div>
+              <div class="sm:col-span-5">
+                <label class="block text-xs text-[var(--muted-foreground)] mb-1">Monthly Netto Salary (€/mo)</label>
+                <input id="inNetSalary" type="number" step="50" min="0" oninput="onNetSalaryInput(+this.value)"
+                  class="sensitive w-full rounded-xl bg-[var(--card)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--primary)]" />
+              </div>
+            </div>
+            <div id="salaryEquivStrip" class="sensitive text-xs text-[var(--muted-foreground)] flex flex-wrap justify-between gap-2 pt-0.5 font-mono">
+              <span>Monthly Brutto: €0/mo</span>
+              <span>Annual Netto: €0/yr</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-[var(--muted-foreground)] mb-1">Steuerklasse (Tax Class)</label>
               <select id="inTaxClass" onchange="updateField('taxClass', this.value)"
@@ -1113,6 +1135,8 @@
 
     const DEFAULT_STATE = {
       grossSalary: 82000,
+      salaryMode: 'gross',
+      netMonthlyOverride: 0,
       taxClass: 'I',
       churchTax: 0,
       healthType: 'GKV',
@@ -1469,6 +1493,19 @@
       return 55000 * 0.28 + 210000 * 0.42 + (zvE - 265000) * 0.45;
     }
 
+    function solveGrossFromNet(targetNetMonthly, taxClass, churchTaxRate, healthType, pkvMonthly, hasChildren) {
+      if (!targetNetMonthly || targetNetMonthly <= 0) return 0;
+      let lo = 0;
+      let hi = Math.max(500000, targetNetMonthly * 36);
+      for (let i = 0; i < 42; i++) {
+        const mid = (lo + hi) / 2;
+        const est = calcGermanNetSalary(mid, taxClass, churchTaxRate, healthType, pkvMonthly, hasChildren).netMonthly;
+        if (est < targetNetMonthly) lo = mid;
+        else hi = mid;
+      }
+      return Math.round((lo + hi) / 2);
+    }
+
     // =========================================================
     // ANONYMOUS PUBLIC MARKET ORACLE
     // =========================================================
@@ -1539,9 +1576,42 @@
       renderAll();
     }
 
+    function onGrossSalaryInput(grossVal) {
+      state.salaryMode = 'gross';
+      state.grossSalary = Math.max(0, grossVal || 0);
+      const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+      state.netMonthlyOverride = Math.round(pay.netMonthly);
+      const netEl = document.getElementById('inNetSalary');
+      if (netEl && document.activeElement !== netEl) netEl.value = Math.round(pay.netMonthly);
+      persistState();
+      renderAll();
+    }
+
+    function onNetSalaryInput(netMonthlyVal) {
+      state.salaryMode = 'net';
+      state.netMonthlyOverride = Math.max(0, netMonthlyVal || 0);
+      state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+      const grossEl = document.getElementById('inGrossSalary');
+      if (grossEl && document.activeElement !== grossEl) grossEl.value = state.grossSalary;
+      persistState();
+      renderAll();
+    }
+
     function updateField(key, val) {
       state[key] = val;
       if (key === 'retireAge') document.getElementById('wiRetireAge').value = val;
+      if (['taxClass', 'churchTax', 'healthType', 'pkvMonthly', 'hasChildren'].includes(key)) {
+        if (state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0) {
+          state.grossSalary = solveGrossFromNet(state.netMonthlyOverride, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+          const gEl = document.getElementById('inGrossSalary');
+          if (gEl) gEl.value = state.grossSalary;
+        } else {
+          const p = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+          state.netMonthlyOverride = Math.round(p.netMonthly);
+          const nEl = document.getElementById('inNetSalary');
+          if (nEl) nEl.value = Math.round(p.netMonthly);
+        }
+      }
       if (key === 'tagesgeldPlan') {
         ['inTagesPlanTab1', 'inTagesPlan'].forEach(id => { const el = document.getElementById(id); if (el && +el.value !== val) el.value = val; });
       }
@@ -1597,6 +1667,9 @@
     // =========================================================
     function computeMetrics() {
       const pay = calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+      if (state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0) {
+        pay.netMonthly = state.netMonthlyOverride;
+      }
       const etfTotal = (state.etfs || []).reduce((s, e) => s + (Number(e.value) || 0), 0);
       const etfPlan = (state.etfs || []).reduce((s, e) => s + (Number(e.monthlyPlan) || 0), 0);
       const etfWeightedReturn = etfTotal > 0
@@ -1794,6 +1867,15 @@
       document.getElementById('tbTax').textContent = '-' + fmtEUR(m.pay.taxMonthly);
       document.getElementById('tbSocial').textContent = '-' + fmtEUR(m.pay.socialMonthly);
       document.getElementById('tbNet').textContent = fmtEUR(m.pay.netMonthly);
+
+      const convBadge = document.getElementById('salaryConvBadge');
+      if (convBadge) {
+        convBadge.textContent = state.salaryMode === 'net' ? 'Net/mo → Gross/yr (Auto)' : 'Gross/yr → Net/mo (Auto)';
+      }
+      const equivStrip = document.getElementById('salaryEquivStrip');
+      if (equivStrip) {
+        equivStrip.innerHTML = `<span>Monthly Brutto: ${fmtEUR(m.pay.grossMonthly)}/mo</span><span>Annual Netto: ${fmtEUR(m.pay.netMonthly * 12)}/yr</span>`;
+      }
 
       const gM = m.pay.grossMonthly || 1;
       const pTax = (m.pay.taxMonthly / gM) * 100;
@@ -2351,6 +2433,7 @@ Convert German numbers (48.500,00 €) to standard JSON numbers (48500). Omit mi
 Return ONLY a valid JSON block:
 {
   "grossSalary": 82000,
+  "netMonthlySalary": 4070,
   "taxClass": "I",
   "age": 38,
   "monthlySpend": 2450,
@@ -2408,6 +2491,13 @@ Return ONLY a valid JSON block:
         numKeys.forEach(k => { if (typeof parsed[k] === 'number' && !isNaN(parsed[k])) state[k] = parsed[k]; });
         if (['I','II','III','IV','V','VI'].includes(parsed.taxClass)) state.taxClass = parsed.taxClass;
         if (['private','basis','riester'].includes(parsed.continentaleType)) state.continentaleType = parsed.continentaleType;
+        if (typeof parsed.netMonthlySalary === 'number' && parsed.netMonthlySalary > 0 && !(typeof parsed.grossSalary === 'number' && parsed.grossSalary > 0)) {
+          state.salaryMode = 'net';
+          state.netMonthlyOverride = parsed.netMonthlySalary;
+          state.grossSalary = solveGrossFromNet(parsed.netMonthlySalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+        } else if (typeof parsed.grossSalary === 'number' && parsed.grossSalary > 0) {
+          state.salaryMode = 'gross';
+        }
         if (Array.isArray(parsed.etfs) && parsed.etfs.length) {
           state.etfs = parsed.etfs.map(e => ({
             name: e.name || 'ETF', isin: e.isin || '', value: Number(e.value) || 0,
@@ -2485,8 +2575,10 @@ Return ONLY a valid JSON block:
     }
 
     function syncInputsFromState() {
+      const calcNet = Math.round(calcGermanNetSalary(state.grossSalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren).netMonthly);
+      const netVal = state.salaryMode === 'net' && (state.netMonthlyOverride || 0) > 0 ? state.netMonthlyOverride : calcNet;
       const map = {
-        inGrossSalary: state.grossSalary, inTaxClass: state.taxClass, inChurchTax: state.churchTax,
+        inGrossSalary: state.grossSalary, inNetSalary: netVal, inTaxClass: state.taxClass, inChurchTax: state.churchTax,
         inHealthType: state.healthType || 'GKV', inPkvMonthly: state.pkvMonthly || 420,
         inAge: state.age, inRetireAge: state.retireAge, inMonthlySpend: state.monthlySpend,
         inDrvCurrent: state.drvCurrentMonthly, inDrvProjected: state.drvProjectedMonthly, inDrvGrowth: state.drvGrowthRate,
