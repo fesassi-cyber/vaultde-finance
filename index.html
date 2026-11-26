@@ -663,6 +663,10 @@
               <input id="inInflation" type="number" step="0.1" min="0" max="6" oninput="updateField('inflation', +this.value)"
                 class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
             </div>
+            <label class="flex items-start gap-2 text-xs text-[var(--muted-foreground)] cursor-pointer pt-1">
+              <input id="inIncludeFfbRetire" type="checkbox" onchange="updateField('includeFfbInRetirement', this.checked)" class="accent-[var(--primary)] w-4 h-4 mt-0.5 shrink-0" />
+              <span>Include FFB ETFs in retirement payout <span class="text-[11px] opacity-80">(OFF = kept separate to spend along the way)</span></span>
+            </label>
           </div>
           <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-1.5 text-xs">
             <div class="flex justify-between">
@@ -670,7 +674,7 @@
               <span id="retBaseIncome" class="sensitive font-mono font-semibold">€0/mo</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-[var(--muted-foreground)]">Private Portfolio (3.5% SWR)</span>
+              <span id="retPrivateLabel" class="text-[var(--muted-foreground)]">Solit &amp; Cash (3.5% SWR)</span>
               <span id="retPrivateIncome" class="sensitive font-mono font-semibold text-[var(--primary)]">€0/mo</span>
             </div>
             <div class="border-t border-[var(--border)] pt-1.5 flex justify-between font-bold">
@@ -1375,6 +1379,7 @@
       continentaleProjectedMonthly: 0,
       retireTargetMonthly: 3200,
       inflation: 2.0,
+      includeFfbInRetirement: false,
       // Investments
       etfs: [
         { name: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', value: 48500, monthlyPlan: 800, expReturn: 7.0 },
@@ -1988,6 +1993,7 @@
           const pensionSum = metall + conti;
           const tot = (invSum + cashSum + pensionSum) / defl;
           const contribDefl = contributed / defl;
+          const incFfb = !!state.includeFfbInRetirement;
           pts.push({
             yearOffset: y,
             age: (state.age || 35) + y,
@@ -1998,7 +2004,8 @@
             contributed: contribDefl,
             growth: Math.max(0, tot - contribDefl),
             total: tot,
-            privateOnly: (invSum + cashSum) / defl
+            privateOnly: (invSum + cashSum) / defl,
+            retirePrivateOnly: ((incFfb ? etf : 0) + solit + cashSum) / defl
           });
           etf = etf * (1 + rEtf) + (etfPlan + extraEtfMo) * 12;
           solit = solit * (1 + rSolit) + solitPlan * 12;
@@ -2016,7 +2023,8 @@
       const consSeries = buildSeries(-2, simYears, wiExtraEtf);
       const optSeries = buildSeries(2, simYears, wiExtraEtf);
 
-      const privateAtRetireReal = baselineSeries[baselineSeries.length - 1].privateOnly;
+      const incFfb = !!state.includeFfbInRetirement;
+      const privateAtRetireReal = baselineSeries[baselineSeries.length - 1].retirePrivateOnly;
       const privateMonthlyReal = (privateAtRetireReal * 0.035) / 12;
 
       // "IF YOU STOPPED SAVING TODAY" (Accrued entitlement only, €0 future contributions)
@@ -2025,7 +2033,7 @@
       const accruedMetallReal = ((metallTotal * Math.pow(1 + rM, nM) / inflFactor) * 0.042 / 12) * 0.78;
       const accruedContiReal = ((contiTotal * Math.pow(1 + rC, nM) / inflFactor) * 0.040 / 12) * contiNetFactor;
       const accruedPrivCapReal = (
-        etfTotal * Math.pow(1 + etfWeightedReturn / 100, yearsToRetire) +
+        (incFfb ? etfTotal * Math.pow(1 + etfWeightedReturn / 100, yearsToRetire) : 0) +
         solitTotal * Math.pow(1.04, yearsToRetire) +
         cashTotal * Math.pow(1 + cashAvgYield / 100, yearsToRetire)
       ) / inflFactor;
@@ -2042,7 +2050,7 @@
         metallTotal * ((state.metallReturn || 4.5) / 100) +
         contiTotal * ((state.continentaleReturn || 5.0) / 100);
 
-      const simPrivateAtRetire = baseSeries[baseSeries.length - 1].privateOnly;
+      const simPrivateAtRetire = baseSeries[baseSeries.length - 1].retirePrivateOnly;
       const simMonthlyIncome = drvReal + metallMonthlyReal + contiMonthlyReal + (simPrivateAtRetire * wiSwr) / 12;
 
       // Drawdown simulator (Real €, Age retireAge -> 95)
@@ -2173,6 +2181,9 @@
       const totalRet = baseRet + m.privateMonthlyReal;
       const gap = totalRet - (state.retireTargetMonthly || 0);
       document.getElementById('retBaseIncome').textContent = `${fmtEUR(baseRet)}/mo`;
+      const incFfbLbl = state.includeFfbInRetirement ? 'Private Portfolio incl. FFB (3.5% SWR)' : 'Solit & Cash (FFB Excluded, 3.5%)';
+      const privLblEl = document.getElementById('retPrivateLabel');
+      if (privLblEl) privLblEl.textContent = incFfbLbl;
       document.getElementById('retPrivateIncome').textContent = `${fmtEUR(m.privateMonthlyReal)}/mo`;
       const gapEl = document.getElementById('retGapStatus');
       gapEl.textContent = `${gap >= 0 ? '+' : ''}${fmtEUR(gap)}/mo (${gap >= 0 ? 'Surplus' : 'Gap'})`;
@@ -2469,7 +2480,7 @@
         { label: 'Pillar 1 · DRV (Net Real)', val: drv, color: 'var(--chart-1)' },
         { label: 'Pillar 2 · MetallRente bAV (Net Real)', val: metall, color: 'var(--chart-3)' },
         { label: 'Pillar 3 · Continentale Zusatzrente (Net Real)', val: conti, color: 'var(--chart-5)' },
-        { label: 'Pillar 4 · Private Portfolio (3.5% SWR)', val: priv, color: 'var(--chart-2)' }
+        { label: state.includeFfbInRetirement ? 'Pillar 4 · Private Portfolio incl. FFB (3.5%)' : 'Pillar 4 · Solit & Cash (FFB Excluded, 3.5%)', val: priv, color: 'var(--chart-2)' }
       ];
       document.getElementById('retirementBarContainer').innerHTML = rows.map(r => `
         <div class="space-y-1 text-xs">
@@ -3304,6 +3315,8 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
       Object.entries(map).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
       const ch = document.getElementById('inHasChildren');
       if (ch) ch.checked = !!state.hasChildren;
+      const ffbRet = document.getElementById('inIncludeFfbRetire');
+      if (ffbRet) ffbRet.checked = !!state.includeFfbInRetirement;
     }
 
     // =========================================================
