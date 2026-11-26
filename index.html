@@ -969,16 +969,19 @@
       </div>
 
       <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2">
-        <label class="block text-xs font-semibold">2. Paste Anonymized JSON from Gemini</label>
-        <textarea id="geminiJsonInput" rows="6" placeholder='Paste Gemini output here (```json fences are auto-stripped)...'
+        <label class="block text-xs font-semibold">2. Paste Gemini Output Here (Plain KEY=VALUE or JSON — Messy Text OK!)</label>
+        <textarea id="geminiJsonInput" rows="7" placeholder="Paste the whole Gemini reply here — works with KEY = VALUE lines OR JSON (even with bullet points, comments, € signs, or smart quotes)..."
           class="w-full rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 text-xs font-mono focus:outline-none focus:border-[var(--primary)]"></textarea>
-        <p id="geminiImportMsg" class="hidden text-xs"></p>
+        <div id="geminiImportMsg" class="hidden text-xs whitespace-pre-wrap rounded-lg p-2.5 border"></div>
       </div>
 
-      <div class="flex items-center justify-end gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2">
         <button onclick="closeGeminiSetupModal()" class="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)]">Cancel</button>
+        <button onclick="previewGeminiInput()" class="px-3.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-medium hover:border-[var(--primary)]">
+          🔍 Test &amp; Preview
+        </button>
         <button onclick="applyGeminiJson()" class="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90">
-          ✓ Merge &amp; Log Snapshot
+          ✓ Import &amp; Save
         </button>
       </div>
     </div>
@@ -2425,41 +2428,270 @@
     }
 
     // =========================================================
-    // GEMINI PRIVATE GEM BRIDGE & QUARTERLY CHECK-IN
+    // GEMINI PRIVATE GEM BRIDGE (UNIVERSAL KEY=VALUE + SMART JSON)
     // =========================================================
-    const GEMINI_EXTRACTION_PROMPT = `Extract ONLY the financial numbers from the attached PDFs (DRV Renteninformation, MetallRente, Continentale Zusatzrente, FFB Depot, Solit, Tagesgeld/Festgeld, Daniel Bossenz Quarterly PDF).
+    const GEMINI_EXTRACTION_PROMPT = `Transform all financial information from this session / attached PDFs into VaultDE Plain-Text Import format.
 STRICT PRIVACY RULE: Strip ALL personal identifiers (name, address, IBAN, contract/depot numbers, Steuer-ID).
-Convert German numbers (48.500,00 €) to standard JSON numbers (48500). Omit missing fields.
-Return ONLY a valid JSON block:
-{
-  "grossSalary": 82000,
-  "netMonthlySalary": 4070,
-  "taxClass": "I",
-  "age": 38,
-  "monthlySpend": 2450,
-  "drvCurrentMonthly": 980,
-  "drvProjectedMonthly": 2350,
-  "metallBalance": 24000,
-  "metallMonthly": 320,
-  "continentaleType": "private",
-  "continentaleBalance": 14500,
-  "continentaleMonthly": 200,
-  "continentaleProjectedMonthly": 0,
-  "etfs": [
-    { "name": "Vanguard FTSE All-World", "isin": "IE00BK5BQT80", "value": 48500, "monthlyPlan": 800, "expReturn": 7.0 }
-  ],
-  "solitGoldGrams": 120,
-  "solitGoldPlan": 150,
-  "solitSilverGrams": 1500,
-  "solitSilverPlan": 50,
-  "tagesgeld": 15000,
-  "tagesgeldRate": 2.75,
-  "tagesgeldPlan": 300,
-  "festgeld": 20000,
-  "festgeldRate": 3.1,
-  "festgeldPlan": 100,
-  "advisorSummary": "2-3 sentence summary of Daniel Bossenz PDF takeaways & actions"
-}`;
+RULES:
+- Output ONLY simple KEY = VALUE lines (NO JSON braces, NO quotes, NO markdown tables).
+- Omit any line where the value is unknown.
+- Use plain numbers (e.g. 48500 or 2.75). For Solit use grams.
+- For each FFB ETF add one line: etf = Name | ISIN | CurrentValueEUR | MonthlyPlanEUR | ExpectedReturnPct
+
+FORMAT:
+grossSalary = 82000
+netMonthlySalary = 4070
+taxClass = I
+age = 38
+retireAge = 67
+monthlySpend = 2450
+healthType = GKV
+pkvMonthly = 0
+churchTax = 0
+hasChildren = false
+drvCurrentMonthly = 980
+drvProjectedMonthly = 2350
+metallBalance = 24000
+metallMonthly = 320
+metallReturn = 4.5
+continentaleType = private
+continentaleBalance = 14500
+continentaleMonthly = 200
+continentaleReturn = 5.0
+continentaleProjectedMonthly = 0
+solitGoldGrams = 120
+solitGoldPlan = 150
+solitSilverGrams = 1500
+solitSilverPlan = 50
+tagesgeld = 15000
+tagesgeldRate = 2.75
+tagesgeldPlan = 300
+festgeld = 20000
+festgeldRate = 3.1
+festgeldPlan = 100
+etf = Vanguard FTSE All-World | IE00BK5BQT80 | 48500 | 800 | 7.0
+advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and actions`;
+
+    function parseFlexNum(v) {
+      if (typeof v === 'number') return isNaN(v) ? null : v;
+      if (v === null || v === undefined) return null;
+      let s = String(v).trim();
+      if (!s || /^(null|none|n\/a|-|unknown|undefined)$/i.test(s)) return null;
+      // Strip currency, units, spaces, trailing comments
+      s = s.replace(/\/\/.*$/, '').replace(/[€$%gG]|EUR|eur|USD/g, '').replace(/[\s\u00A0']/g, '');
+      // Handle German format 48.500,50 or 48.500 vs US 48,500.50
+      if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else if (/^-?\d+,\d{1,2}$/.test(s)) {
+        s = s.replace(',', '.');
+      } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) {
+        s = s.replace(/,/g, '');
+      }
+      const m = s.match(/-?\d+(\.\d+)?/);
+      if (!m) return null;
+      const n = Number(m[0]);
+      return isNaN(n) ? null : n;
+    }
+
+    function normalizeKeyName(rawKey) {
+      const k = String(rawKey || '').trim().replace(/^["'`]+|["'`]+$/g, '');
+      const low = k.toLowerCase().replace(/[\s_-]+/g, '');
+      const aliases = {
+        grosssalary: 'grossSalary', grossannualsalary: 'grossSalary', annualgross: 'grossSalary', brutto: 'grossSalary', jahresbrutto: 'grossSalary',
+        netmonthlysalary: 'netMonthlySalary', monthlynetto: 'netMonthlySalary', monthlynet: 'netMonthlySalary', netto: 'netMonthlySalary', netsalary: 'netMonthlySalary',
+        taxclass: 'taxClass', steuerklasse: 'taxClass',
+        age: 'age', alter: 'age',
+        retireage: 'retireAge', retirementage: 'retireAge', rentenalter: 'retireAge',
+        monthlyspend: 'monthlySpend', avgmonthlyspend: 'monthlySpend', ausgaben: 'monthlySpend',
+        healthtype: 'healthType', krankenversicherung: 'healthType',
+        pkvmonthly: 'pkvMonthly',
+        churchtax: 'churchTax', kirchensteuer: 'churchTax',
+        haschildren: 'hasChildren', kinder: 'hasChildren',
+        drvcurrentmonthly: 'drvCurrentMonthly', drvcurrent: 'drvCurrentMonthly',
+        drvprojectedmonthly: 'drvProjectedMonthly', drvprojected: 'drvProjectedMonthly',
+        drvgrowthrate: 'drvGrowthRate',
+        metallbalance: 'metallBalance', metallrentebalance: 'metallBalance', metallstand: 'metallBalance',
+        metallmonthly: 'metallMonthly', metallrentemonthly: 'metallMonthly',
+        metallreturn: 'metallReturn',
+        continentaletype: 'continentaleType',
+        continentalebalance: 'continentaleBalance', continentalestand: 'continentaleBalance',
+        continentalemonthly: 'continentaleMonthly',
+        continentalereturn: 'continentaleReturn',
+        continentaleprojectedmonthly: 'continentaleProjectedMonthly',
+        retiretargetmonthly: 'retireTargetMonthly',
+        inflation: 'inflation',
+        solitgoldgrams: 'solitGoldGrams', goldgrams: 'solitGoldGrams',
+        solitgoldplan: 'solitGoldPlan',
+        solitsilvergrams: 'solitSilverGrams', silvergrams: 'solitSilverGrams',
+        solitsilverplan: 'solitSilverPlan',
+        tagesgeld: 'tagesgeld', tagesgeldbalance: 'tagesgeld', tagesgeldstand: 'tagesgeld',
+        tagesgeldrate: 'tagesgeldRate',
+        tagesgeldplan: 'tagesgeldPlan',
+        festgeld: 'festgeld', festgeldbalance: 'festgeld', festgeldstand: 'festgeld',
+        festgeldrate: 'festgeldRate',
+        festgeldplan: 'festgeldPlan',
+        advisorsummary: 'advisorSummary', summary: 'advisorSummary',
+        etf: 'etf', etfs: 'etfs'
+      };
+      return aliases[low] || k;
+    }
+
+    function tryRepairAndParseJson(rawText) {
+      let text = String(rawText || '');
+      // 1. Prefer fenced ```json ... ``` or ``` ... ``` block containing {
+      const fence = text.match(/```(?:json)?\s*([\s\S]*?\{[\s\S]*?\}[\s\S]*?)```/i);
+      if (fence) text = fence[1];
+      else {
+        const first = text.indexOf('{');
+        const last = text.lastIndexOf('}');
+        if (first !== -1 && last > first) text = text.slice(first, last + 1);
+        else return null;
+      }
+      // Normalize smart quotes & invisible chars
+      text = text
+        .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ');
+      // Strip block comments and line comments outside quoted strings
+      text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+      text = text.replace(/("(\\.|[^"\\])*")|\/\/[^\n]*/g, (m, str) => str || '');
+      // Remove trailing commas before } or ]
+      text = text.replace(/,\s*([}\]])/g, '$1');
+      // Fix bare Euro/percent suffixes on numeric values (e.g. : 48500 € or : 2.75%)
+      text = text.replace(/:\s*(-?\d+(?:[.,]\d+)?)\s*(?:€|EUR|%|g)\b/gi, ': $1');
+      // Quote unquoted object keys
+      text = text.replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3');
+
+      try {
+        const obj = JSON.parse(text);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) return obj;
+      } catch (e) {
+        // Attempt auto-closing truncated braces/brackets
+        let fixed = text.replace(/,\s*$/, '');
+        const openB = (fixed.match(/\[/g) || []).length - (fixed.match(/\]/g) || []).length;
+        const openC = (fixed.match(/\{/g) || []).length - (fixed.match(/\}/g) || []).length;
+        if (openB > 0) fixed += ']'.repeat(openB);
+        if (openC > 0) fixed += '}'.repeat(openC);
+        fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+        try {
+          const obj2 = JSON.parse(fixed);
+          if (obj2 && typeof obj2 === 'object' && !Array.isArray(obj2)) return obj2;
+        } catch (e2) {}
+      }
+      return null;
+    }
+
+    function parseUniversalGeminiInput(rawText) {
+      const result = { etfs: [], mode: '' };
+      let text = String(rawText || '')
+        .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ');
+
+      // Path A: Try JSON (with auto-repair) first
+      const jsonObj = tryRepairAndParseJson(text);
+      if (jsonObj) {
+        result.mode = 'JSON (auto-cleaned)';
+        const flatten = (obj) => {
+          Object.entries(obj).forEach(([k, v]) => {
+            const nk = normalizeKeyName(k);
+            if (nk === 'etfs' && Array.isArray(v)) {
+              v.forEach(item => {
+                if (item && typeof item === 'object') {
+                  result.etfs.push({
+                    name: String(item.name || item.etf || item.title || 'ETF').trim(),
+                    isin: String(item.isin || item.ticker || '').trim(),
+                    value: parseFlexNum(item.value ?? item.balance ?? item.stand ?? item.currentValue) || 0,
+                    monthlyPlan: parseFlexNum(item.monthlyPlan ?? item.sparplan ?? item.monthly) || 0,
+                    expReturn: parseFlexNum(item.expReturn ?? item.return) ?? 7.0
+                  });
+                }
+              });
+            } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+              flatten(v); // gracefully unwrap nested objects like { retirement: { drv... } }
+            } else if (v !== null && v !== undefined && v !== '') {
+              result[nk] = v;
+            }
+          });
+        };
+        flatten(jsonObj);
+      } else {
+        // Path B: Universal Plain-Text KEY = VALUE (or broken-JSON line fallback!)
+        result.mode = 'Plain-Text KEY=VALUE';
+        const lines = text.split(/\r?\n/);
+        lines.forEach(line => {
+          const trimmed = line.trim().replace(/^[-*•]\s*/, '').replace(/,\s*$/, '');
+          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('```')) return;
+          const m = trimmed.match(/^["']?([A-Za-z_][A-Za-z0-9_\s-]{1,40})["']?\s*[:=]\s*(.+)$/);
+          if (!m) return;
+          const nk = normalizeKeyName(m[1]);
+          let val = m[2].trim().replace(/,\s*$/, '').replace(/^["']|["']$/g, '').trim();
+          if (!val || /^(null|none|n\/a|undefined|\{|\[)$/i.test(val)) return;
+
+          if (nk === 'etf') {
+            const parts = val.split('|').map(p => p.trim());
+            result.etfs.push({
+              name: parts[0] || 'ETF',
+              isin: parts[1] || '',
+              value: parseFlexNum(parts[2]) || 0,
+              monthlyPlan: parseFlexNum(parts[3]) || 0,
+              expReturn: parseFlexNum(parts[4]) ?? 7.0
+            });
+          } else {
+            result[nk] = val;
+          }
+        });
+      }
+
+      // Extract recognized typed fields
+      const numKeys = [
+        'grossSalary', 'netMonthlySalary', 'age', 'retireAge', 'monthlySpend', 'pkvMonthly', 'churchTax',
+        'drvCurrentMonthly', 'drvProjectedMonthly', 'drvGrowthRate', 'metallBalance', 'metallMonthly', 'metallReturn',
+        'continentaleBalance', 'continentaleMonthly', 'continentaleReturn', 'continentaleProjectedMonthly',
+        'retireTargetMonthly', 'inflation',
+        'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
+        'tagesgeld', 'tagesgeldRate', 'tagesgeldPlan', 'festgeld', 'festgeldRate', 'festgeldPlan'
+      ];
+      const extracted = { nums: {}, enums: {}, etfs: result.etfs, advisorSummary: '', mode: result.mode };
+      numKeys.forEach(k => {
+        if (result[k] !== undefined) {
+          const n = parseFlexNum(result[k]);
+          if (n !== null) {
+            if (k === 'churchTax' && n >= 1) extracted.nums[k] = n / 100; // e.g. 8 or 9 -> 0.08 / 0.09
+            else extracted.nums[k] = n;
+          }
+        }
+      });
+
+      if (result.taxClass) {
+        const tcMap = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V', '6': 'VI' };
+        const tc = tcMap[String(result.taxClass).trim()] || String(result.taxClass).trim().toUpperCase().replace(/^CLASS\s*/i, '');
+        if (['I', 'II', 'III', 'IV', 'V', 'VI'].includes(tc)) extracted.enums.taxClass = tc;
+      }
+      if (result.healthType) {
+        const ht = String(result.healthType).trim().toUpperCase();
+        if (ht.includes('PKV') || ht.includes('PRIV')) extracted.enums.healthType = 'PKV';
+        else if (ht.includes('GKV') || ht.includes('PUB') || ht.includes('GESETZ')) extracted.enums.healthType = 'GKV';
+      }
+      if (result.hasChildren !== undefined) {
+        const hc = String(result.hasChildren).trim().toLowerCase();
+        if (['true', 'yes', 'ja', '1'].includes(hc)) extracted.enums.hasChildren = true;
+        else if (['false', 'no', 'nein', '0'].includes(hc)) extracted.enums.hasChildren = false;
+      }
+      if (result.continentaleType) {
+        const ct = String(result.continentaleType).trim().toLowerCase();
+        if (ct.includes('basis') || ct.includes('rürup') || ct.includes('rurup')) extracted.enums.continentaleType = 'basis';
+        else if (ct.includes('riester') || ct.includes('bav')) extracted.enums.continentaleType = 'riester';
+        else extracted.enums.continentaleType = 'private';
+      }
+      if (result.advisorSummary && typeof result.advisorSummary === 'string') {
+        extracted.advisorSummary = result.advisorSummary.trim();
+      }
+
+      const count = Object.keys(extracted.nums).length + Object.keys(extracted.enums).length + extracted.etfs.length + (extracted.advisorSummary ? 1 : 0);
+      extracted.count = count;
+      return extracted;
+    }
 
     function openGeminiSetupModal() {
       document.getElementById('geminiPromptText').textContent = GEMINI_EXTRACTION_PROMPT;
@@ -2471,57 +2703,78 @@ Return ONLY a valid JSON block:
     async function copyGeminiPrompt() {
       try {
         await navigator.clipboard.writeText(GEMINI_EXTRACTION_PROMPT);
-        showToast('📋 Gem prompt copied to clipboard');
+        showToast('📋 Prompt copied to clipboard');
       } catch (e) {}
+    }
+
+    function previewGeminiInput() {
+      const raw = document.getElementById('geminiJsonInput').value.trim();
+      const msg = document.getElementById('geminiImportMsg');
+      msg.classList.remove('hidden');
+      if (!raw) {
+        msg.textContent = 'Paste your Gemini text above first.';
+        msg.className = 'text-xs rounded-lg p-2.5 border border-[var(--warning)]/40 text-[var(--warning)]';
+        return;
+      }
+      const ex = parseUniversalGeminiInput(raw);
+      if (ex.count === 0) {
+        msg.textContent = 'No recognized VaultDE fields found. Use the prompt above to ask Gemini to format your numbers as KEY = VALUE lines.';
+        msg.className = 'text-xs rounded-lg p-2.5 border border-[var(--error)]/40 text-[var(--error)]';
+        return;
+      }
+      const keysPreview = [...Object.keys(ex.nums), ...Object.keys(ex.enums)].join(', ');
+      msg.textContent = `✓ Ready (${ex.mode}) — Detected ${ex.count} item(s):\n` +
+        (keysPreview ? `Fields: ${keysPreview}\n` : '') +
+        (ex.etfs.length ? `ETFs: ${ex.etfs.length} holding(s)\n` : '') +
+        (ex.advisorSummary ? `Advisor Summary: Yes` : '');
+      msg.className = 'text-xs whitespace-pre-wrap rounded-lg p-2.5 border border-[var(--success)]/40 bg-[var(--success)]/10 text-[var(--success)]';
     }
 
     function applyGeminiJson() {
       const raw = document.getElementById('geminiJsonInput').value.trim();
       const msg = document.getElementById('geminiImportMsg');
-      try {
-        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-        const parsed = JSON.parse(cleaned);
-        const numKeys = [
-          'grossSalary', 'age', 'retireAge', 'monthlySpend',
-          'drvCurrentMonthly', 'drvProjectedMonthly', 'metallBalance', 'metallMonthly',
-          'continentaleBalance', 'continentaleMonthly', 'continentaleReturn', 'continentaleProjectedMonthly',
-          'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
-          'tagesgeld', 'tagesgeldRate', 'tagesgeldPlan', 'festgeld', 'festgeldRate', 'festgeldPlan'
-        ];
-        numKeys.forEach(k => { if (typeof parsed[k] === 'number' && !isNaN(parsed[k])) state[k] = parsed[k]; });
-        if (['I','II','III','IV','V','VI'].includes(parsed.taxClass)) state.taxClass = parsed.taxClass;
-        if (['private','basis','riester'].includes(parsed.continentaleType)) state.continentaleType = parsed.continentaleType;
-        if (typeof parsed.netMonthlySalary === 'number' && parsed.netMonthlySalary > 0 && !(typeof parsed.grossSalary === 'number' && parsed.grossSalary > 0)) {
-          state.salaryMode = 'net';
-          state.netMonthlyOverride = parsed.netMonthlySalary;
-          state.grossSalary = solveGrossFromNet(parsed.netMonthlySalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
-        } else if (typeof parsed.grossSalary === 'number' && parsed.grossSalary > 0) {
-          state.salaryMode = 'gross';
-        }
-        if (Array.isArray(parsed.etfs) && parsed.etfs.length) {
-          state.etfs = parsed.etfs.map(e => ({
-            name: e.name || 'ETF', isin: e.isin || '', value: Number(e.value) || 0,
-            monthlyPlan: Number(e.monthlyPlan) || 0, expReturn: Number(e.expReturn) || 7.0
-          }));
-        }
-        if (parsed.advisorSummary) {
-          if (!state.advisorDocs) state.advisorDocs = [];
-          state.advisorDocs.unshift({
-            id: 'gemini-' + Date.now(), title: `Daniel Bossenz — ${currentQuarterLabel()} Gem Extract`,
-            advisor: 'Daniel Bossenz', date: new Date().toISOString().slice(0, 10),
-            category: 'Quarterly Update', hasPdf: false, fileSize: '',
-            summary: parsed.advisorSummary, status: 'Action Needed'
-          });
-        }
-        syncInputsFromState();
-        logSnapshotNow(true);
-        closeGeminiSetupModal();
-        showToast('✨ Gemini JSON merged & quarter logged!');
-      } catch (err) {
-        msg.textContent = 'Invalid JSON — make sure you pasted the full { ... } block.';
-        msg.className = 'text-xs text-[var(--error)]';
+      const ex = parseUniversalGeminiInput(raw);
+      if (ex.count === 0) {
+        msg.textContent = 'Could not detect any VaultDE fields. Click "Copy Prompt" above and ask Gemini to convert your data to KEY = VALUE lines.';
+        msg.className = 'text-xs rounded-lg p-2.5 border border-[var(--error)]/40 bg-[var(--error)]/10 text-[var(--error)]';
         msg.classList.remove('hidden');
+        return;
       }
+
+      // Apply enums first so net->gross conversion uses updated taxClass/GKV/etc.
+      Object.entries(ex.enums).forEach(([k, v]) => { state[k] = v; });
+
+      // Apply numeric fields
+      Object.entries(ex.nums).forEach(([k, v]) => {
+        if (k !== 'netMonthlySalary') state[k] = v;
+      });
+
+      // Handle salary mode cleanly
+      if (ex.nums.netMonthlySalary > 0 && !(ex.nums.grossSalary > 0)) {
+        state.salaryMode = 'net';
+        state.netMonthlyOverride = ex.nums.netMonthlySalary;
+        state.grossSalary = solveGrossFromNet(ex.nums.netMonthlySalary, state.taxClass, state.churchTax, state.healthType, state.pkvMonthly, state.hasChildren);
+      } else if (ex.nums.grossSalary > 0) {
+        state.salaryMode = 'gross';
+        if (ex.nums.netMonthlySalary > 0) state.netMonthlyOverride = ex.nums.netMonthlySalary;
+      }
+
+      if (ex.etfs.length) state.etfs = ex.etfs;
+
+      if (ex.advisorSummary) {
+        if (!state.advisorDocs) state.advisorDocs = [];
+        state.advisorDocs.unshift({
+          id: 'gemini-' + Date.now(), title: `Daniel Bossenz — ${currentQuarterLabel()} Gem Extract`,
+          advisor: 'Daniel Bossenz', date: new Date().toISOString().slice(0, 10),
+          category: 'Quarterly Update', hasPdf: false, fileSize: '',
+          summary: ex.advisorSummary, status: 'Action Needed'
+        });
+      }
+
+      syncInputsFromState();
+      logSnapshotNow(true);
+      closeGeminiSetupModal();
+      showToast(`✨ Imported ${ex.count} fields (${ex.mode})!`);
     }
 
     function openQuarterlyModal() {
