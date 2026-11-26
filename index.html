@@ -541,7 +541,7 @@
               ↻ Sync Public Rates
             </button>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
             <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
               <div class="text-[var(--muted-foreground)]">EUR / USD</div>
               <input id="mktEurUsd" type="number" step="0.01" oninput="updateMarket('eurUsd', +this.value)"
@@ -555,6 +555,16 @@
             <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
               <div class="text-[var(--muted-foreground)]">Silver (€/g)</div>
               <input id="mktSilverG" type="number" step="0.01" oninput="updateMarket('silverEurPerG', +this.value)"
+                class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
+            </div>
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">Platinum / Platin (€/g)</div>
+              <input id="mktPlatinumG" type="number" step="0.5" oninput="updateMarket('platinumEurPerG', +this.value)"
+                class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
+            </div>
+            <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
+              <div class="text-[var(--muted-foreground)]">Palladium (€/g)</div>
+              <input id="mktPalladiumG" type="number" step="0.5" oninput="updateMarket('palladiumEurPerG', +this.value)"
                 class="w-full bg-transparent font-mono font-bold text-sm mt-0.5 focus:outline-none" />
             </div>
             <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-2.5">
@@ -630,7 +640,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold">Solit Edelmetalle (Gold &amp; Silber)</h2>
+            <h2 class="text-sm font-bold">Solit Edelmetalle (Gold, Silber, Platin &amp; Palladium)</h2>
             <span id="solitTotalBadge" class="sensitive text-sm font-mono font-bold text-[var(--warning)]">€0</span>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -654,9 +664,29 @@
               <input id="inSolitSilverPlan" type="number" step="25" min="0" oninput="updateField('solitSilverPlan', +this.value)"
                 class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
             </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Platinum / Platin (grams)</label>
+              <input id="inSolitPlatinumG" type="number" step="1" min="0" oninput="updateField('solitPlatinumGrams', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Platinum Sparplan (€/mo)</label>
+              <input id="inSolitPlatinumPlan" type="number" step="25" min="0" oninput="updateField('solitPlatinumPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Palladium Holdings (grams)</label>
+              <input id="inSolitPalladiumG" type="number" step="1" min="0" oninput="updateField('solitPalladiumGrams', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs text-[var(--muted-foreground)] mb-1">Palladium Sparplan (€/mo)</label>
+              <input id="inSolitPalladiumPlan" type="number" step="25" min="0" oninput="updateField('solitPalladiumPlan', +this.value)"
+                class="sensitive w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 text-sm font-mono tabular-nums" />
+            </div>
           </div>
-          <div class="text-xs text-[var(--muted-foreground)] flex justify-between pt-2 border-t border-[var(--border)]">
-            <span id="solitSplitText" class="sensitive">Gold €0 · Silver €0</span>
+          <div class="text-xs text-[var(--muted-foreground)] flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border)]">
+            <span id="solitSplitText" class="sensitive">Gold €0 · Silver €0 · Platin €0 · Pallad €0</span>
             <span id="solitPlanTotal" class="sensitive font-mono font-semibold text-[var(--foreground)]">€0/mo</span>
           </div>
         </div>
@@ -1030,6 +1060,14 @@
           <input id="qSolitSilver" type="number" step="10" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
         </div>
         <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Solit Platinum (grams)</label>
+          <input id="qSolitPlatinum" type="number" step="1" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[var(--muted-foreground)] mb-1">Solit Palladium (grams)</label>
+          <input id="qSolitPalladium" type="number" step="1" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
+        </div>
+        <div>
           <label class="block text-[var(--muted-foreground)] mb-1">Save Tagesgeld (€/mo)</label>
           <input id="qTagesPlan" type="number" step="50" class="w-full rounded-xl bg-[var(--background)] border border-[var(--border)] px-3 py-2 font-mono" />
         </div>
@@ -1171,6 +1209,10 @@
       solitGoldPlan: 150,
       solitSilverGrams: 1500,
       solitSilverPlan: 50,
+      solitPlatinumGrams: 0,
+      solitPlatinumPlan: 0,
+      solitPalladiumGrams: 0,
+      solitPalladiumPlan: 0,
       // Cash
       tagesgeld: 15000,
       tagesgeldRate: 2.75,
@@ -1179,7 +1221,7 @@
       festgeldRate: 3.1,
       festgeldPlan: 100,
       // Market Oracle
-      market: { eurUsd: 1.08, goldEurPerG: 84.5, silverEurPerG: 0.96 },
+      market: { eurUsd: 1.08, goldEurPerG: 84.5, silverEurPerG: 0.96, platinumEurPerG: 30.5, palladiumEurPerG: 31.0 },
       // Goals
       goals: [
         { name: '6-Month Emergency Fund', target: 15000, targetYear: 2027, source: 'cash' },
@@ -1532,30 +1574,40 @@
         }
       } catch (e) {}
 
-      // Try public anonymous metals endpoint (gold/silver USD/oz -> EUR/g)
+      // Try public anonymous metals endpoint (XAU/XAG/XPT/XPD USD/oz -> EUR/g)
       let metalsOk = false;
       try {
-        const mRes = await fetch('https://api.gold-api.com/price/XAU');
-        const sRes = await fetch('https://api.gold-api.com/price/XAG');
-        if (mRes.ok && sRes.ok) {
-          const g = await mRes.json();
+        const [gRes, sRes, ptRes, pdRes] = await Promise.all([
+          fetch('https://api.gold-api.com/price/XAU'),
+          fetch('https://api.gold-api.com/price/XAG'),
+          fetch('https://api.gold-api.com/price/XPT'),
+          fetch('https://api.gold-api.com/price/XPD')
+        ]);
+        const fx = state.market.eurUsd || 1.08;
+        if (gRes.ok) {
+          const g = await gRes.json();
+          if (g.price) { state.market.goldEurPerG = +(g.price / 31.1035 / fx).toFixed(2); document.getElementById('mktGoldG').value = state.market.goldEurPerG; metalsOk = true; }
+        }
+        if (sRes.ok) {
           const s = await sRes.json();
-          if (g.price && s.price && state.market.eurUsd > 0) {
-            state.market.goldEurPerG = +(g.price / 31.1035 / state.market.eurUsd).toFixed(2);
-            state.market.silverEurPerG = +(s.price / 31.1035 / state.market.eurUsd).toFixed(2);
-            document.getElementById('mktGoldG').value = state.market.goldEurPerG;
-            document.getElementById('mktSilverG').value = state.market.silverEurPerG;
-            metalsOk = true;
-          }
+          if (s.price) { state.market.silverEurPerG = +(s.price / 31.1035 / fx).toFixed(2); document.getElementById('mktSilverG').value = state.market.silverEurPerG; metalsOk = true; }
+        }
+        if (ptRes.ok) {
+          const pt = await ptRes.json();
+          if (pt.price) { state.market.platinumEurPerG = +(pt.price / 31.1035 / fx).toFixed(2); document.getElementById('mktPlatinumG').value = state.market.platinumEurPerG; metalsOk = true; }
+        }
+        if (pdRes.ok) {
+          const pd = await pdRes.json();
+          if (pd.price) { state.market.palladiumEurPerG = +(pd.price / 31.1035 / fx).toFixed(2); document.getElementById('mktPalladiumG').value = state.market.palladiumEurPerG; metalsOk = true; }
         }
       } catch (e) {}
 
       if (fxOk || metalsOk) {
-        status.textContent = metalsOk ? 'Live FX + Metals' : 'Live FX (0 B sent)';
+        status.textContent = metalsOk ? 'Live FX + 4 Metals' : 'Live FX (0 B sent)';
         status.className = 'font-mono text-xs mt-1 text-[var(--success)]';
         persistState();
         renderAll();
-        showToast(metalsOk ? '✓ Live FX, Gold & Silver synced anonymously' : '✓ Live EUR/USD synced anonymously');
+        showToast(metalsOk ? '✓ Live FX, Gold, Silver, Platin & Palladium synced' : '✓ Live EUR/USD synced anonymously');
       } else {
         status.textContent = 'Offline / Sandboxed';
         status.className = 'font-mono text-xs mt-1 text-[var(--muted-foreground)]';
@@ -1681,8 +1733,10 @@
 
       const solitGoldVal = (state.solitGoldGrams || 0) * (state.market.goldEurPerG || 84.5);
       const solitSilverVal = (state.solitSilverGrams || 0) * (state.market.silverEurPerG || 0.96);
-      const solitTotal = solitGoldVal + solitSilverVal;
-      const solitPlan = (state.solitGoldPlan || 0) + (state.solitSilverPlan || 0);
+      const solitPlatinumVal = (state.solitPlatinumGrams || 0) * (state.market.platinumEurPerG || 30.5);
+      const solitPalladiumVal = (state.solitPalladiumGrams || 0) * (state.market.palladiumEurPerG || 31.0);
+      const solitTotal = solitGoldVal + solitSilverVal + solitPlatinumVal + solitPalladiumVal;
+      const solitPlan = (state.solitGoldPlan || 0) + (state.solitSilverPlan || 0) + (state.solitPlatinumPlan || 0) + (state.solitPalladiumPlan || 0);
 
       const cashTotal = (state.tagesgeld || 0) + (state.festgeld || 0);
       const cashPlan = (state.tagesgeldPlan || 0) + (state.festgeldPlan || 0);
@@ -1806,7 +1860,7 @@
 
       return {
         pay, etfTotal, etfPlan, etfWeightedReturn,
-        solitGoldVal, solitSilverVal, solitTotal, solitPlan,
+        solitGoldVal, solitSilverVal, solitPlatinumVal, solitPalladiumVal, solitTotal, solitPlan,
         cashTotal, cashPlan, cashInterest, cashAvgYield, estVorabpauschale, sparerCap,
         metallTotal, contiTotal, contiMonthly, contiFutureNom, contiMonthlyReal,
         netWorth, totalMonthlySaveInvest, monthlySurplus, sparquote, runwayMonths,
@@ -1944,7 +1998,8 @@
 
       renderEtfTable(m);
       document.getElementById('solitTotalBadge').textContent = fmtEUR(m.solitTotal);
-      document.getElementById('solitSplitText').textContent = `Gold ${fmtEUR(m.solitGoldVal)} · Silver ${fmtEUR(m.solitSilverVal)}`;
+      document.getElementById('solitSplitText').textContent =
+        `Au ${fmtEUR(m.solitGoldVal)} · Ag ${fmtEUR(m.solitSilverVal)} · Pt ${fmtEUR(m.solitPlatinumVal)} · Pd ${fmtEUR(m.solitPalladiumVal)}`;
       document.getElementById('solitPlanTotal').textContent = `${fmtEUR(m.solitPlan)}/mo`;
       document.getElementById('cashTotalBadge').textContent = fmtEUR(m.cashTotal);
       document.getElementById('cashPlanTotal').textContent = `Monthly Cash Savings: ${fmtEUR(m.cashPlan)}/mo`;
@@ -2463,6 +2518,10 @@ solitGoldGrams = 120
 solitGoldPlan = 150
 solitSilverGrams = 1500
 solitSilverPlan = 50
+solitPlatinumGrams = 0
+solitPlatinumPlan = 0
+solitPalladiumGrams = 0
+solitPalladiumPlan = 0
 tagesgeld = 15000
 tagesgeldRate = 2.75
 tagesgeldPlan = 300
@@ -2521,10 +2580,14 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
         continentaleprojectedmonthly: 'continentaleProjectedMonthly',
         retiretargetmonthly: 'retireTargetMonthly',
         inflation: 'inflation',
-        solitgoldgrams: 'solitGoldGrams', goldgrams: 'solitGoldGrams',
+        solitgoldgrams: 'solitGoldGrams', goldgrams: 'solitGoldGrams', solitgold: 'solitGoldGrams',
         solitgoldplan: 'solitGoldPlan',
-        solitsilvergrams: 'solitSilverGrams', silvergrams: 'solitSilverGrams',
-        solitsilverplan: 'solitSilverPlan',
+        solitsilvergrams: 'solitSilverGrams', silvergrams: 'solitSilverGrams', solitsilber: 'solitSilverGrams', solitsilbergrams: 'solitSilverGrams',
+        solitsilverplan: 'solitSilverPlan', solitsilberplan: 'solitSilverPlan',
+        solitplatinumgrams: 'solitPlatinumGrams', platinumgrams: 'solitPlatinumGrams', platingrams: 'solitPlatinumGrams', solitplatin: 'solitPlatinumGrams', solitplatingrams: 'solitPlatinumGrams',
+        solitplatinumplan: 'solitPlatinumPlan', solitplatinplan: 'solitPlatinumPlan',
+        solitpalladiumgrams: 'solitPalladiumGrams', palladiumgrams: 'solitPalladiumGrams', solitpalladium: 'solitPalladiumGrams',
+        solitpalladiumplan: 'solitPalladiumPlan',
         tagesgeld: 'tagesgeld', tagesgeldbalance: 'tagesgeld', tagesgeldstand: 'tagesgeld',
         tagesgeldrate: 'tagesgeldRate',
         tagesgeldplan: 'tagesgeldPlan',
@@ -2652,6 +2715,7 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
         'continentaleBalance', 'continentaleMonthly', 'continentaleReturn', 'continentaleProjectedMonthly',
         'retireTargetMonthly', 'inflation',
         'solitGoldGrams', 'solitGoldPlan', 'solitSilverGrams', 'solitSilverPlan',
+        'solitPlatinumGrams', 'solitPlatinumPlan', 'solitPalladiumGrams', 'solitPalladiumPlan',
         'tagesgeld', 'tagesgeldRate', 'tagesgeldPlan', 'festgeld', 'festgeldRate', 'festgeldPlan'
       ];
       const extracted = { nums: {}, enums: {}, etfs: result.etfs, advisorSummary: '', mode: result.mode };
@@ -2787,6 +2851,8 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
       document.getElementById('qMonthlySpend').value = state.monthlySpend || 0;
       document.getElementById('qSolitGold').value = state.solitGoldGrams || 0;
       document.getElementById('qSolitSilver').value = state.solitSilverGrams || 0;
+      document.getElementById('qSolitPlatinum').value = state.solitPlatinumGrams || 0;
+      document.getElementById('qSolitPalladium').value = state.solitPalladiumGrams || 0;
       document.getElementById('qTagesPlan').value = state.tagesgeldPlan || 0;
       document.getElementById('qFestPlan').value = state.festgeldPlan || 0;
       document.getElementById('qBossenzNote').value = '';
@@ -2808,6 +2874,8 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
       state.monthlySpend = +document.getElementById('qMonthlySpend').value || 0;
       state.solitGoldGrams = +document.getElementById('qSolitGold').value || 0;
       state.solitSilverGrams = +document.getElementById('qSolitSilver').value || 0;
+      state.solitPlatinumGrams = +document.getElementById('qSolitPlatinum').value || 0;
+      state.solitPalladiumGrams = +document.getElementById('qSolitPalladium').value || 0;
       state.tagesgeldPlan = +document.getElementById('qTagesPlan').value || 0;
       state.festgeldPlan = +document.getElementById('qFestPlan').value || 0;
       (state.etfs || []).forEach((e, i) => {
@@ -2844,11 +2912,14 @@ advisorSummary = Concise 2-sentence summary of Daniel Bossenz takeaways and acti
         inRetireTarget: state.retireTargetMonthly, inInflation: state.inflation,
         inSolitGoldG: state.solitGoldGrams, inSolitGoldPlan: state.solitGoldPlan,
         inSolitSilverG: state.solitSilverGrams, inSolitSilverPlan: state.solitSilverPlan,
+        inSolitPlatinumG: state.solitPlatinumGrams || 0, inSolitPlatinumPlan: state.solitPlatinumPlan || 0,
+        inSolitPalladiumG: state.solitPalladiumGrams || 0, inSolitPalladiumPlan: state.solitPalladiumPlan || 0,
         inTagesgeld: state.tagesgeld, inTagesRate: state.tagesgeldRate,
         inTagesPlan: state.tagesgeldPlan || 0, inTagesPlanTab1: state.tagesgeldPlan || 0,
         inFestgeld: state.festgeld, inFestRate: state.festgeldRate,
         inFestPlan: state.festgeldPlan || 0, inFestPlanTab1: state.festgeldPlan || 0,
         mktEurUsd: state.market.eurUsd, mktGoldG: state.market.goldEurPerG, mktSilverG: state.market.silverEurPerG,
+        mktPlatinumG: state.market.platinumEurPerG ?? 30.5, mktPalladiumG: state.market.palladiumEurPerG ?? 31.0,
         wiRetireAge: state.retireAge || 67
       };
       Object.entries(map).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
